@@ -39,7 +39,7 @@ module Fastlane
         client.add_labels_to_an_issue(SLUG, issue.number, ['auto-closed'])
 
         puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months} months old, closing now"
-        body = ["There hasn't been any activity on this issue the last 2 months"]
+        body = ["There hasn't been any activity on this issue the last 3 months"]
         body << "This issue will be closed for now. Please feel free to [re-open a new one](https://github.com/fastlane/issue-bot/issues/new) :+1:"
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.close_issue(SLUG, issue.number)
@@ -47,7 +47,7 @@ module Fastlane
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
 
         puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months} months old, pinging now"
-        body = ["There hasn't been any activity on this issue the last 3 months"]
+        body = ["There hasn't been any activity on this issue the last 2 months"]
         body << "Due to the high number of incoming issues we have to clean some of the old ones, as many of the issues have been resolved with the most recent updats."
         body << "If this issue is still relevant to you, please let us know by commenting with the most up to date information :+1:"
         
