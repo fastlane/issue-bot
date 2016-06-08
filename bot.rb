@@ -6,7 +6,7 @@ require 'json'
 
 module Fastlane
   class Bot
-    SLUG = "fastlane/issue-bot"
+    SLUG = "fastlane/fastlane"
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     AWAITING_REPLY = "awaiting-reply"
@@ -38,8 +38,8 @@ module Fastlane
 
       if warning_sent && diff_in_months > ISSUE_CLOSED
         puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months} months old, closing now"
-        body = ["There hasn't been any activity on this issue the last 3 months"]
-        body << "This issue will be closed for now. Please feel free to [re-open a new one](https://github.com/fastlane/issue-bot/issues/new) :+1:"
+        body = []
+        body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.close_issue(SLUG, issue.number)
         client.add_labels_to_an_issue(SLUG, issue.number, ['auto-closed'])
@@ -47,10 +47,10 @@ module Fastlane
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
 
         puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months} months old, pinging now"
-        body = ["There hasn't been any activity on this issue the last 2 months"]
-        body << "Due to the high number of incoming issues we have to clean some of the old ones, as many of the issues have been resolved with the most recent updats."
-        body << "If this issue is still relevant to you, please let us know by commenting with the most up to date information :+1:"
-        
+        body = []
+        body << "There hasn't been any activity on this issue recently. Due to the high number of incoming GitHub notifications, we have to clean some of the old issues, as many of have already been resolved with the latest updates."
+        body << "Please make sure to update to the latest [fastlane](https://fastlane.tools) version and check if that solves the issue. Let us know if that works for you by adding a comment :+1:"
+
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.add_labels_to_an_issue(SLUG, issue.number, [AWAITING_REPLY])
       end
