@@ -37,7 +37,7 @@ module Fastlane
 
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
       if warning_sent && diff_in_months > ISSUE_CLOSED
-        puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
+        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
         body = []
         body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
@@ -47,7 +47,7 @@ module Fastlane
       elsif diff_in_months > ISSUE_WARNING
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
 
-        puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, pinging now"
+        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, pinging now"
         body = []
         body << "There hasn't been any activity on this issue recently. Due to the high number of incoming GitHub notifications, we have to clean some of the old issues, as many of them have already been resolved with the latest updates."
         body << "Please make sure to update to the latest `fastlane` version and check if that solves the issue. Let us know if that works for you by adding a comment :+1:"
