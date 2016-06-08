@@ -8,7 +8,7 @@ module Fastlane
   class Bot
     SLUG = "fastlane/issue-bot"
     ISSUE_WARNING = 2
-    ISSUE_CLOSED = 1 # plus the x months from ISSUE_WARNING
+    ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     AWAITING_REPLY = "awaiting-reply"
 
     def client
@@ -22,7 +22,8 @@ module Fastlane
       counter = 0
       client.issues(SLUG, per_page: 1000, state: "open").each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
-        puts "Investigating #{issue.number}..."
+        return if issue.comments == 0 # we haven't replied yet :(
+        puts "Investigating issue ##{issue.number}..."
         process(issue)
         smart_sleep
         counter += 1
@@ -36,13 +37,12 @@ module Fastlane
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
 
       if warning_sent && diff_in_months > ISSUE_CLOSED
-        client.add_labels_to_an_issue(SLUG, issue.number, ['auto-closed'])
-
         puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months} months old, closing now"
         body = ["There hasn't been any activity on this issue the last 3 months"]
         body << "This issue will be closed for now. Please feel free to [re-open a new one](https://github.com/fastlane/issue-bot/issues/new) :+1:"
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.close_issue(SLUG, issue.number)
+        client.add_labels_to_an_issue(SLUG, issue.number, ['auto-closed'])
       elsif diff_in_months > ISSUE_WARNING
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
 
