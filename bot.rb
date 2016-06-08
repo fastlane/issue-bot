@@ -9,7 +9,7 @@ module Fastlane
     SLUG = "fastlane/fastlane"
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
-    AWAITING_REPLY = "awaiting-reply"
+    AWAITING_REPLY = "waiting-for-reply"
 
     def client
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
