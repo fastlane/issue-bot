@@ -20,9 +20,9 @@ module Fastlane
       puts "Fetching issues from '#{SLUG}'..."
       
       counter = 0
-      client.issues(SLUG, per_page: 1000, state: "open").each do |issue|
+      client.issues(SLUG, per_page: 30, state: "open").each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
-        return if issue.comments == 0 # we haven't replied yet :(
+        next if issue.comments == 0 # we haven't replied yet :(
         puts "Investigating issue ##{issue.number}..."
         process(issue)
         smart_sleep
