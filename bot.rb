@@ -25,7 +25,6 @@ module Fastlane
         next if issue.comments == 0 # we haven't replied yet :(
         puts "Investigating issue ##{issue.number}..."
         process(issue)
-        smart_sleep
         counter += 1
       end
       puts "[SUCCESS] I worked through #{counter} issues / PRs, much faster than human beings, bots will take over"
@@ -35,7 +34,6 @@ module Fastlane
       diff_in_months = (Time.now - issue.updated_at) / 60.0 / 60.0 / 24.0 / 30.0
 
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
-
       if warning_sent && diff_in_months > ISSUE_CLOSED
         puts "Issue #{issue.number} (#{issue.title}) is #{diff_in_months} months old, closing now"
         body = []
@@ -43,6 +41,7 @@ module Fastlane
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.close_issue(SLUG, issue.number)
         client.add_labels_to_an_issue(SLUG, issue.number, ['auto-closed'])
+        smart_sleep
       elsif diff_in_months > ISSUE_WARNING
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
 
@@ -53,6 +52,7 @@ module Fastlane
 
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.add_labels_to_an_issue(SLUG, issue.number, [AWAITING_REPLY])
+        smart_sleep
       end
     end
 
