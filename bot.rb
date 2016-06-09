@@ -59,7 +59,7 @@ module Fastlane
     end
 
     def smart_sleep
-      sleep 1
+      sleep 5
     end
   end
 end
