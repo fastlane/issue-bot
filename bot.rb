@@ -10,6 +10,7 @@ module Fastlane
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     AWAITING_REPLY = "waiting-for-reply"
+    AUTO_CLOSED = "auto-closed"
 
     def client
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
@@ -37,12 +38,20 @@ module Fastlane
 
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
       if warning_sent && diff_in_months > ISSUE_CLOSED
-        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
-        body = []
-        body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
-        client.add_comment(SLUG, issue.number, body.join("\n\n"))
-        client.close_issue(SLUG, issue.number)
-        client.add_labels_to_an_issue(SLUG, issue.number, ['auto-closed'])
+        # We sent off a warning, but we have to check if the user replied
+        if client.issue_comments(SLUG, issue.number).last.user.login == client.user.login
+          # No reply from the user, let's close the issue
+          puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
+          body = []
+          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
+          client.add_comment(SLUG, issue.number, body.join("\n\n"))
+          client.close_issue(SLUG, issue.number)
+          client.add_labels_to_an_issue(SLUG, issue.number, AUTO_CLOSED)
+        else
+          # User replied, let's remove the label
+          puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) was replied to by a different user"
+          client.remove_label(SLUG, issue.number, AWAITING_REPLY)
+        end
         smart_sleep
       elsif diff_in_months > ISSUE_WARNING
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
