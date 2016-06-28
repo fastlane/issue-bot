@@ -23,7 +23,6 @@ module Fastlane
       counter = 0
       client.issues(SLUG, per_page: 30, state: "open", direction: 'asc').each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
-        next if issue.comments == 0 # we haven't replied yet :(
         next if issue.labels.collect { |a| a.name }.include?("feature") # we ignore all feature requests for now
 
         puts "Investigating issue ##{issue.number}..."
@@ -34,12 +33,24 @@ module Fastlane
     end
 
     def process(issue)
+      process_inactive(issue)
+      process_code_signing(issue)
+    end
+
+    def myself
+      client.user.login
+    end
+
+    # Responsible for commenting to inactive issues
+    def process_inactive(issue)
+      return if issue.comments == 0 # we haven't replied yet :(
+
       diff_in_months = (Time.now - issue.updated_at) / 60.0 / 60.0 / 24.0 / 30.0
 
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
       if warning_sent && diff_in_months > ISSUE_CLOSED
         # We sent off a warning, but we have to check if the user replied
-        if client.issue_comments(SLUG, issue.number).last.user.login == client.user.login
+        if client.issue_comments(SLUG, issue.number).last.user.login == myself
           # No reply from the user, let's close the issue
           puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
           body = []
@@ -65,6 +76,25 @@ module Fastlane
         client.add_labels_to_an_issue(SLUG, issue.number, [AWAITING_REPLY])
         smart_sleep
       end
+    end
+
+    def process_code_signing(issue)
+      return if issue.comments > 0 # we might have already replied, no bot necessary
+
+      signing_words = ["signing", "provisioning"]
+      body = issue.body + issue.title
+      signing_related = signing_words.find_all do |keyword|
+        body.downcase.include?(keyword)
+      end
+      return if signing_related.count == 0
+
+      url = "https://github.com/fastlane/fastlane/tree/codesigning-guide/fastlane/docs/Codesigning" # TODO: Update URL once the PR is merged
+      puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing"
+      body = []
+      body << "It seems like this issue might be related to code signing :no_entry_sign:"
+      body << "Check out the [Code Signing Troubleshooting Guide](#{url}) for more information on how to fix common code signing issues :+1:"
+
+      client.add_comment(SLUG, issue.number, body.join("\n\n"))
     end
 
     def smart_sleep
