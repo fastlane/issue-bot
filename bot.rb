@@ -92,7 +92,7 @@ module Fastlane
       puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing"
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
-      body << "Check out the [Code Signing Troubleshooting Guide](#{url}) for more information on how to fix common code signing issues :+1:"
+      body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
 
       client.add_comment(SLUG, issue.number, body.join("\n\n"))
     end
