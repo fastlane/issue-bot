@@ -4,7 +4,7 @@ GEM
     addressable (2.4.0)
     coderay (1.1.1)
     colored (1.2)
-    excon (0.45.4)
+    excon (0.50.1)
     faraday (0.9.2)
       multipart-post (>= 1.2, < 3)
     method_source (0.8.2)
@@ -15,6 +15,7 @@ GEM
       coderay (~> 1.1.0)
       method_source (~> 0.8.1)
       slop (~> 3.4)
+    rake (11.2.2)
     sawyer (0.7.0)
       addressable (>= 2.3.5, < 2.5)
       faraday (~> 0.8, < 0.10)
@@ -28,6 +29,7 @@ DEPENDENCIES
   excon
   octokit (~> 4.0)
   pry
+  rake
 
 BUNDLED WITH
-   1.12.4
+   1.12.5
