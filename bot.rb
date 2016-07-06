@@ -19,7 +19,7 @@ module Fastlane
     def start
       client.auto_paginate = true
       puts "Fetching issues from '#{SLUG}'..."
-      
+
       counter = 0
       client.issues(SLUG, per_page: 30, state: "open", direction: 'asc').each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
@@ -41,9 +41,26 @@ module Fastlane
       client.user.login
     end
 
+    def comment_and_close(body, issue)
+      client.add_comment(SLUG, issue.number, body.join("\n\n"))
+      client.close_issue(SLUG, issue.number)
+      client.add_labels_to_an_issue(SLUG, issue.number, AUTO_CLOSED)
+    end
+
+    def process_inactive_migrated(issue)
+      puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) has been inactive since monorepo migration, closing now"
+      body = []
+      body << "There hasn't been any activity on this issue recently. Due to the high number of incoming issues, we are cleaning up some of the older issues as many of them have been resolved with recent updates."
+      body << "Please make sure to update to the latest `fastlane` version and check if that solves the issue."
+      body << "We are going to close this issue, but please feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you are still experiencing this problem 👍"
+      comment_and_close(body, issue)
+    end
     # Responsible for commenting to inactive issues
     def process_inactive(issue)
-      return if issue.comments == 0 # we haven't replied yet :(
+      is_inactive_migrated_issue = issue.user.login == 'fastlane-bot' && issue.comments == 0
+      process_inactive_migrated(issue) if is_inactive_migrated_issue
+
+      return if issue.comments == 0 || is_inactive_migrated_issue
 
       diff_in_months = (Time.now - issue.updated_at) / 60.0 / 60.0 / 24.0 / 30.0
 
@@ -54,10 +71,8 @@ module Fastlane
           # No reply from the user, let's close the issue
           puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
           body = []
-          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
-          client.add_comment(SLUG, issue.number, body.join("\n\n"))
-          client.close_issue(SLUG, issue.number)
-          client.add_labels_to_an_issue(SLUG, issue.number, AUTO_CLOSED)
+          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you are still experiencing this problem 👍"
+          comment_and_close(body, issue)
         else
           # User replied, let's remove the label
           puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) was replied to by a different user"
