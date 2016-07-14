@@ -57,7 +57,7 @@ module Fastlane
     end
     # Responsible for commenting to inactive issues
     def process_inactive(issue)
-      is_inactive_migrated_issue = issue.user.login == 'fastlane-bot' && !!client.issue_comments(SLUG, issue.number).find { |c| c.user.login != 'fastlane-bot' }
+      is_inactive_migrated_issue = (issue.user.login == myself && !!client.issue_comments(SLUG, issue.number).find { |c| c.user.login != 'fastlane-bot' })
       process_inactive_migrated(issue) if is_inactive_migrated_issue
 
       return if issue.comments == 0 || is_inactive_migrated_issue
