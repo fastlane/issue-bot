@@ -9,6 +9,7 @@ module Fastlane
     SLUG = "fastlane/fastlane"
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
+    ISSUE_LOCK = 6 # lock all issues with no activity within the last 6 months
     AWAITING_REPLY = "waiting-for-reply"
     AUTO_CLOSED = "auto-closed"
 
@@ -33,6 +34,7 @@ module Fastlane
     end
 
     def process(issue)
+      process_old(issue)
       process_inactive(issue)
       process_code_signing(issue)
     end
@@ -41,7 +43,27 @@ module Fastlane
       client.user.login
     end
 
-    # Responsible for commenting to inactive issues
+    # Lock old, inactive conversations
+    def process_old(issue)
+      return if issue.locked # already locked, nothing to do here
+
+      diff_in_months = (Time.now - issue.updated_at) / 60.0 / 60.0 / 24.0 / 30.0
+
+      return if diff_in_months < ISSUE_LOCK
+
+      puts "Locking conversations for https://github.com/#{SLUG}/issues/#{issue.number} since it hasn't been updated in #{diff_in_months.round} months"
+      # Currently in beta https://developer.github.com/changes/2016-02-11-issue-locking-api/
+      cmd = "curl 'https://api.github.com/repos/#{SLUG}/issues/#{issue.number}/lock' \
+            -X PUT \
+            -H 'Authorization: token #{ENV["GITHUB_API_TOKEN"]}' \
+            -H 'Content-Length: 0' \
+            -H 'Accept: application/vnd.github.the-key-preview'"
+      `#{cmd} > /dev/null`
+      puts "Done locking the conversation"
+      smart_sleep
+    end
+
+    # Responsible for commenting to inactive issues, and closing them after a while
     def process_inactive(issue)
       return if issue.comments == 0 # we haven't replied yet :(
 
@@ -78,6 +100,7 @@ module Fastlane
       end
     end
 
+    # Ask people to check out the code signing bot
     def process_code_signing(issue)
       return if issue.comments > 0 # we might have already replied, no bot necessary
 
