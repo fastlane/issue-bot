@@ -65,8 +65,6 @@ module Fastlane
 
     # Responsible for commenting to inactive issues, and closing them after a while
     def process_inactive(issue)
-      return if issue.comments == 0 # we haven't replied yet :(
-
       diff_in_months = (Time.now - issue.updated_at) / 60.0 / 60.0 / 24.0 / 30.0
 
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
