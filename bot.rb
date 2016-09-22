@@ -21,22 +21,25 @@ module Fastlane
       client.auto_paginate = true
       puts "Fetching issues from '#{SLUG}'..."
       
-      counter = 0
-      client.issues(SLUG, per_page: 30, state: "open", direction: 'asc').each do |issue|
+      client.issues(SLUG, per_page: 30, state: "all").each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
         next if issue.labels.collect { |a| a.name }.include?("feature") # we ignore all feature requests for now
 
         puts "Investigating issue ##{issue.number}..."
-        process(issue)
-        counter += 1
+        process_open_issue(issue) if issue.state == "open"
+        process_closed_issue(issue) if issue.state == "closed"
       end
-      puts "[SUCCESS] I worked through #{counter} issues / PRs, much faster than human beings, bots will take over"
+
+      puts "[SUCCESS] I worked through issues / PRs, much faster than human beings, bots will take over"
     end
 
-    def process(issue)
-      process_old(issue)
+    def process_open_issue(issue)
       process_inactive(issue)
       process_code_signing(issue)
+    end
+
+    def process_closed_issue(issue)
+      lock_old_issues(issue)
     end
 
     def myself
@@ -44,7 +47,7 @@ module Fastlane
     end
 
     # Lock old, inactive conversations
-    def process_old(issue)
+    def lock_old_issues(issue)
       return if issue.locked # already locked, nothing to do here
 
       diff_in_months = (Time.now - issue.updated_at) / 60.0 / 60.0 / 24.0 / 30.0
