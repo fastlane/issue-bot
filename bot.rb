@@ -23,7 +23,6 @@ module Fastlane
       
       client.issues(SLUG, per_page: 30, state: "all").each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
-        next if issue.labels.collect { |a| a.name }.include?("feature") # we ignore all feature requests for now
 
         puts "Investigating issue ##{issue.number}..."
         process_open_issue(issue) if issue.state == "open"
