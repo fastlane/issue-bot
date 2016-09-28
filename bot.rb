@@ -111,7 +111,7 @@ module Fastlane
       end
       return if signing_related.count == 0
 
-      url = "https://docs.fastlane.tools/codesigning/GettingStarted/"
+      url = "https://docs.fastlane.tools/codesigning/getting-started/"
       puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing"
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
