@@ -42,6 +42,7 @@ module Fastlane
 
       bot_actions.each do |bot_reply|
         client.add_comment(SLUG, issue.number, bot_reply) if bot_reply.to_s.length > 0
+        smart_sleep
       end
     end
 
