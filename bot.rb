@@ -41,7 +41,7 @@ module Fastlane
       bot_actions << process_env_check(issue)
 
       bot_actions.each do |bot_reply|
-        client.add_comment(SLUG, bot_reply[:issue], bot_reply[:message])
+        client.add_comment(SLUG, issue, bot_reply)
       end
     end
 
@@ -117,7 +117,7 @@ module Fastlane
         body = []
         body << "It seems like you have not included the output of `fastlane env`."
         body << "To make it easier for us help you resolve this issue, please update the issue to include the output of `fastlane env` :+1:"
-        return { issue: issue, message: body.join("\n\n") }
+        return body.join("\n\n")
       end
     end
 
@@ -135,7 +135,7 @@ module Fastlane
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
       body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
-      return { issue: issue, message: body.join("\n\n") }
+      return body.join("\n\n")
     end
 
     def smart_sleep
