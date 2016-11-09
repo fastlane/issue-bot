@@ -34,7 +34,7 @@ module Fastlane
 
     def process_open_issue(issue)
       bot_actions = []
-      bot_actions << process_inactive(issue)
+      process_inactive(issue)
 
       return if issue.comments > 0 # there maybe already some bot replys
       bot_actions << process_code_signing(issue)
