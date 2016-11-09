@@ -20,7 +20,7 @@ module Fastlane
     def start
       client.auto_paginate = true
       puts "Fetching issues from '#{SLUG}'..."
-      
+
       client.issues(SLUG, per_page: 30, state: "all").each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
 
@@ -33,8 +33,16 @@ module Fastlane
     end
 
     def process_open_issue(issue)
+      bot_actions = []
       process_inactive(issue)
-      process_code_signing(issue)
+
+      return if issue.comments > 0 # there maybe already some bot replys
+      bot_actions << process_code_signing(issue)
+      bot_actions << process_env_check(issue)
+
+      bot_actions.each do |bot_reply|
+        client.add_comment(SLUG, issue, bot_reply)
+      end
     end
 
     def process_closed_issue(issue)
@@ -57,7 +65,7 @@ module Fastlane
       # Currently in beta https://developer.github.com/changes/2016-02-11-issue-locking-api/
       cmd = "curl 'https://api.github.com/repos/#{SLUG}/issues/#{issue.number}/lock' \
             -X PUT \
-            -H 'Authorization: token #{ENV["GITHUB_API_TOKEN"]}' \
+            -H 'Authorization: token #{ENV['GITHUB_API_TOKEN']}' \
             -H 'Content-Length: 0' \
             -H 'Accept: application/vnd.github.the-key-preview'"
       `#{cmd} > /dev/null`
@@ -100,10 +108,21 @@ module Fastlane
       end
     end
 
+    # Remind people to include `fastlane env`
+
+    def process_env_check(issue)
+      body = issue.body + issue.title
+      unless body.include?("Loaded fastlane plugins")
+        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report"
+        body = []
+        body << "It seems like you have not included the output of `fastlane env`."
+        body << "To make it easier for us help you resolve this issue, please update the issue to include the output of `fastlane env` :+1:"
+        return body.join("\n\n")
+      end
+    end
+
     # Ask people to check out the code signing bot
     def process_code_signing(issue)
-      return if issue.comments > 0 # we might have already replied, no bot necessary
-
       signing_words = ["signing", "provisioning"]
       body = issue.body + issue.title
       signing_related = signing_words.find_all do |keyword|
@@ -116,8 +135,7 @@ module Fastlane
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
       body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
-
-      client.add_comment(SLUG, issue.number, body.join("\n\n"))
+      return body.join("\n\n")
     end
 
     def smart_sleep
