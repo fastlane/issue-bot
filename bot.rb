@@ -41,7 +41,7 @@ module Fastlane
       bot_actions << process_env_check(issue)
 
       bot_actions.each do |bot_reply|
-        client.add_comment(SLUG, issue, bot_reply)
+        client.add_comment(SLUG, issue, bot_reply) if bot_reply.to_s.length > 0
       end
     end
 
@@ -119,6 +119,7 @@ module Fastlane
         body << "To make it easier for us help you resolve this issue, please update the issue to include the output of `fastlane env` :+1:"
         return body.join("\n\n")
       end
+      return nil
     end
 
     # Ask people to check out the code signing bot
@@ -128,7 +129,7 @@ module Fastlane
       signing_related = signing_words.find_all do |keyword|
         body.downcase.include?(keyword)
       end
-      return if signing_related.count == 0
+      return nil if signing_related.count == 0
 
       url = "https://docs.fastlane.tools/codesigning/getting-started/"
       puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing"
