@@ -41,7 +41,7 @@ module Fastlane
       bot_actions << process_env_check(issue)
 
       bot_actions.each do |bot_reply|
-        client.add_comment(SLUG, issue, bot_reply) if bot_reply.to_s.length > 0
+        client.add_comment(SLUG, issue.number, bot_reply) if bot_reply.to_s.length > 0
       end
     end
 
