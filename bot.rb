@@ -20,7 +20,7 @@ module Fastlane
     def start
       client.auto_paginate = true
       puts "Fetching issues from '#{SLUG}'..."
-      
+
       client.issues(SLUG, per_page: 30, state: "all").each do |issue|
         next unless issue.pull_request.nil? # no PRs for now
 
@@ -35,6 +35,7 @@ module Fastlane
     def process_open_issue(issue)
       process_inactive(issue)
       process_code_signing(issue)
+      process_env_check(issue)
     end
 
     def process_closed_issue(issue)
@@ -57,7 +58,7 @@ module Fastlane
       # Currently in beta https://developer.github.com/changes/2016-02-11-issue-locking-api/
       cmd = "curl 'https://api.github.com/repos/#{SLUG}/issues/#{issue.number}/lock' \
             -X PUT \
-            -H 'Authorization: token #{ENV["GITHUB_API_TOKEN"]}' \
+            -H 'Authorization: token #{ENV['GITHUB_API_TOKEN']}' \
             -H 'Content-Length: 0' \
             -H 'Accept: application/vnd.github.the-key-preview'"
       `#{cmd} > /dev/null`
@@ -97,6 +98,20 @@ module Fastlane
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.add_labels_to_an_issue(SLUG, issue.number, [AWAITING_REPLY])
         smart_sleep
+      end
+    end
+
+    # Remind people to include `fastlane env`
+
+    def process_env_check(issue)
+      return if issue.comments > 0 # we might have already replied, no bot necessary
+      body = issue.body + issue.title
+      unless body.include?("Loaded fastlane plugins")
+        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report"
+        body = []
+        body << "It seems like you have not included the output of `fastlane env`."
+        body << "To help us helping you please be kind and edit your issue and include the full output of `fastlane env` :+1:"
+        client.add_comment(SLUG, issue.number, body.join("\n\n"))
       end
     end
 
