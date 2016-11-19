@@ -101,7 +101,7 @@ module Fastlane
         table << "| Info | Description |\n"
         table << "|------|-------------|\n"
         bot_actions.each do |bot_reply|
-          table << "| 🚫 | #{bot_reply.split("\n").join(' ')}|\n"
+          table << "| #{bot_reply['icon']} | #{bot_reply['msg'].split("\n").join(' ')}|\n"
         end
         rendered_table = MarkdownTableFormatter.new table
         bot_reply = "We found some problems with your issue, in order to get your issue resolved as fast as possible. please try to fix the below informations:\n\n"
@@ -184,7 +184,7 @@ module Fastlane
         puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) has outdated fastlane gems"
         body = []
         body << "Seems you have some outdated gems, please try to update them in first place."
-        return body.join("\n\n")
+        return { "icon" => "🚫", "msg" => body.join("\n\n") }
       end
     end
 
@@ -204,11 +204,12 @@ module Fastlane
       end
       if stacktrace_tools.length > 0
         body = []
-        body = "<b>Found Stacktrace</b><br> <i>#{first_msg.delete("\n")}</i><br> <details><summary>Detailed </summary> <ul>"
+        body << "<b>Found Stacktrace</b><br> <i>#{first_msg.delete("\n")}</i><br> <details><summary>Detailed </summary> <ul>"
         stacktrace_tools.each do |tr|
           body << "<li>#{tr}</li>"
         end
         body << "</ul></details>"
+        return { "icon" => "💡", "msg" => body.join("\n\n") }
       end
     end
 
@@ -219,7 +220,7 @@ module Fastlane
         puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) uses old legacy xcode build api"
         body = []
         body << "You probably using old xcode build api. `use_legacy_build_api` - please try to run your commands without this parameter (or setting it to false)"
-        return body.join("\n\n")
+        return { "icon" => "🚫", "msg" => body.join("\n\n") }
       end
     end
 
@@ -230,7 +231,7 @@ module Fastlane
         puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report"
         body = []
         body << "It seems like you have not included the output of `fastlane env`."
-        return body.join("\n\n")
+        return { "icon" => "🚫", "msg" => body.join("\n\n") }
       end
       return nil
     end
@@ -249,7 +250,7 @@ module Fastlane
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
       body << "Please see [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
-      return body.join("\n\n")
+      return { "icon" => "🚫", "msg" => body.join("\n\n") }
     end
 
     def smart_sleep
