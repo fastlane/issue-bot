@@ -60,7 +60,7 @@ module Fastlane
     def detect_tool_in_issue(issue)
       body = issue.body + issue.title
       tool_counter = {}
-      total = 0
+      total = 1
       TOOLS.each do |t|
         tool_counter[t] = body.scan(/(?=#{t})/).count
         total += tool_counter[t]
@@ -74,6 +74,10 @@ module Fastlane
 
       re = "most related tool(s) detected: "
       total_perc[0..2].each do |top_tool, v|
+        if v == 0
+          # top one is zero so no tool detected
+          return ""
+        end
         re << "_#{top_tool}_,"
       end
 
@@ -92,7 +96,7 @@ module Fastlane
       bot_actions << process_stacktrace_detector(issue)
 
       table = ""
-
+      bot_actions = bot_actions.compact
       if bot_actions.length > 0
         table << "| Info | Description |\n"
         table << "|------|-------------|\n"
