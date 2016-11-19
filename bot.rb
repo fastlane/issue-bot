@@ -193,17 +193,19 @@ module Fastlane
 
       body = issue.body + issue.title
       stacktrace_tools = []
-      stacktrace = body.scan(%r{/lib/(.*?)/(.*?):([0-9]+)})
+      stacktrace = body.scan(%r{/lib/(.*?)/(.*?):([0-9]+)(.*)})
 
-      stacktrace.each do |tool, file_in_lib, line_nr|
+      first_msg = nil
+      stacktrace.each do |tool, file_in_lib, line_nr, msg|
         if TOOLS.any? { |word| tool.include?(word) }
           # https://github.com/fastlane/fastlane/blob/master/cert/lib/cert/commands_generator.rb#L29
           stacktrace_tools << "[#{tool}/lib/#{tool}/#{file_in_lib}:#{line_nr}](https://github.com/fastlane/fastlane/blob/master/#{tool}/lib/#{tool}/#{file_in_lib}#L#{line_nr})"
+          first_msg = msg if first_msg.nil?
         end
       end
       if stacktrace_tools.length > 0
         body = []
-        body = "<details><summary>Found _fastlane_ stacktrace</summary> <ul>"
+        body = "<b>Found Stacktrace</b><br> <i>#{first_msg.delete("\n")}</i><br> <details><summary>Detailed </summary> <ul>"
         stacktrace_tools.each do |tr|
           body << "<li>#{tr}</li>"
         end
