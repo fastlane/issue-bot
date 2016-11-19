@@ -197,11 +197,10 @@ module Fastlane
 
       first_msg = nil
       stacktrace.each do |tool, file_in_lib, line_nr, msg|
-        if TOOLS.any? { |word| tool.include?(word) }
-          # https://github.com/fastlane/fastlane/blob/master/cert/lib/cert/commands_generator.rb#L29
-          stacktrace_tools << "[#{tool}/lib/#{tool}/#{file_in_lib}:#{line_nr}](https://github.com/fastlane/fastlane/blob/master/#{tool}/lib/#{tool}/#{file_in_lib}#L#{line_nr})"
-          first_msg = msg if first_msg.nil?
-        end
+        next unless TOOLS.any? { |word| tool.include?(word) }
+        # https://github.com/fastlane/fastlane/blob/master/cert/lib/cert/commands_generator.rb#L29
+        stacktrace_tools << "[#{tool}/lib/#{tool}/#{file_in_lib}:#{line_nr}](https://github.com/fastlane/fastlane/blob/master/#{tool}/lib/#{tool}/#{file_in_lib}#L#{line_nr})"
+        first_msg = msg if first_msg.nil?
       end
       if stacktrace_tools.length > 0
         body = []
