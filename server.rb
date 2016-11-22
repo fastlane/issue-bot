@@ -7,7 +7,7 @@ def client
 end
 
 post '/payload' do
-  allowed_users = ["hjanuschka"]
+  allowed_users = ["hjanuschka", "KrauseFx", "mfurtak", "tkburner", "ohwutup", "asfalcone"]
   slug = ENV["SLUG"] || "fastlane/fastlane"
   bot_user = ENV["BOT_USER"]
   payload = JSON.parse(request.body.read)
@@ -22,28 +22,28 @@ post '/payload' do
       if allowed_users.include?(comment["user"]["login"])
 
         puts "BOT mentioned"
-        
+
         if body.include?("close issue")
           # close the issue
           client.close_issue(slug, issue["number"])
           # remove command/comment
           client.delete_comment(slug, comment["id"])
         end
-        
+
         if body.include?("lock issue")
           # lock the issue
           client.lock_issue(slug, issue["number"])
           # remove command/comment
           client.delete_comment(slug, comment["id"])
         end
-        
+
         if body.include?("reopen issue")
           # reopen the issue
           client.reopen_issue(slug, issue["number"])
           # remove command/comment
           client.delete_comment(slug, comment["id"])
         end
-        
+
         if body.include?("add tags")
           # add tags: [ bug, question, invalid ]
           tags = body.scan(/.*\[(.*?)\]/).first.first.split(",")
@@ -58,7 +58,7 @@ post '/payload' do
             client.delete_comment(slug, comment["id"])
           end
         end
-        
+
         if body.include?("remove tags")
           # add tags: [ bug, question, invalid ]
           tags = body.scan(/.*\[(.*?)\]/).first.first.split(",")
@@ -69,7 +69,6 @@ post '/payload' do
             client.delete_comment(slug, comment["id"])
           end
         end
-
 
       end
 
