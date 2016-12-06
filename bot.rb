@@ -9,7 +9,7 @@ module Fastlane
     SLUG = "fastlane/fastlane"
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
-    ISSUE_LOCK = 6 # lock all issues with no activity within the last 6 months
+    ISSUE_LOCK = 3 # lock all issues with no activity within the last 3 months
     AWAITING_REPLY = "waiting-for-reply"
     AUTO_CLOSED = "auto-closed"
 
