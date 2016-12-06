@@ -3,15 +3,40 @@ require 'pry'
 require 'excon'
 require 'colored'
 require 'json'
-
+require "./markdown_tableformatter"
 module Fastlane
   class Bot
-    SLUG = "fastlane/fastlane"
+    SLUG = if ENV["REPO_SLUG"]
+             ENV["REPO_SLUG"]
+           else
+             "fastlane/fastlane"
+           end
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     ISSUE_LOCK = 3 # lock all issues with no activity within the last 3 months
     AWAITING_REPLY = "waiting-for-reply"
     AUTO_CLOSED = "auto-closed"
+    TOOLS = []
+    TOOLS << "fastlane_core"
+    TOOLS << "gym"
+    TOOLS << "cert"
+    TOOLS << "credentials_manager"
+    TOOLS << "danger-device_grid"
+    TOOLS << "deliver"
+    TOOLS << "fastlane"
+    TOOLS << "frameit"
+    TOOLS << "match"
+    TOOLS << "pem"
+    TOOLS << "pilot"
+    TOOLS << "produce"
+    TOOLS << "rakelib"
+    TOOLS << "scan"
+    TOOLS << "screengrab"
+    TOOLS << "sigh"
+    TOOLS << "snapshot"
+    TOOLS << "spaceship"
+    TOOLS << "supply"
+    TOOLS << "watchbuild"
 
     def client
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
@@ -32,6 +57,33 @@ module Fastlane
       puts "[SUCCESS] I worked through issues / PRs, much faster than human beings, bots will take over"
     end
 
+    def detect_tool_in_issue(issue)
+      body = issue.body + issue.title
+      tool_counter = {}
+      total = 1
+      TOOLS.each do |t|
+        tool_counter[t] = body.scan(/(?=#{t})/).count
+        total += tool_counter[t]
+      end
+      total_perc = {}
+      tool_counter.each do |tool, cnt|
+        total_perc[tool] = (cnt * 100) / total
+      end
+
+      total_perc = total_perc.sort_by { |_key, value| value }.reverse
+
+      re = "most related tool(s) detected: "
+      total_perc[0..2].each do |top_tool, v|
+        if v == 0
+          # top one is zero so no tool detected
+          return ""
+        end
+        re << "_#{top_tool}_,"
+      end
+
+      re
+    end
+
     def process_open_issue(issue)
       bot_actions = []
       process_inactive(issue)
@@ -39,9 +91,27 @@ module Fastlane
       return if issue.comments > 0 # there maybe already some bot replys
       bot_actions << process_code_signing(issue)
       bot_actions << process_env_check(issue)
+      bot_actions << process_outdated_check(issue)
+      bot_actions << process_legacy_build_api_check(issue)
+      bot_actions << process_stacktrace_detector(issue)
 
-      bot_actions.each do |bot_reply|
-        client.add_comment(SLUG, issue.number, bot_reply) if bot_reply.to_s.length > 0
+      table = ""
+      bot_actions = bot_actions.compact
+      if bot_actions.length > 0
+        table << "| Info | Description |\n"
+        table << "|------|-------------|\n"
+        bot_actions.each do |bot_reply|
+          table << "| #{bot_reply['icon']} | #{bot_reply['msg'].split("\n").join(' ')}|\n"
+        end
+        rendered_table = MarkdownTableFormatter.new table
+        bot_reply = "We found some problems with your issue, in order to get your issue resolved as fast as possible. please try to fix the below informations:\n\n"
+        bot_reply << rendered_table.to_md
+        bot_reply << "\n\n "
+        bot_reply << "__Please beware that this is automatically generated and maybe false/positive, i am just a 🤖 trying to help you!__\n\n"
+
+        bot_reply << detect_tool_in_issue(issue)
+
+        client.add_comment(SLUG, issue.number, bot_reply)
       end
     end
 
@@ -108,16 +178,60 @@ module Fastlane
       end
     end
 
-    # Remind people to include `fastlane env`
+    def process_outdated_check(issue)
+      body = issue.body + issue.title
+      if body.include?("Update availaible")
+        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) has outdated fastlane gems"
+        body = []
+        body << "Seems you have some outdated gems, please try to update them in first place."
+        return { "icon" => "🚫", "msg" => body.join("\n\n") }
+      end
+    end
 
+    def process_stacktrace_detector(issue)
+      puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) has fastlane stacktrace"
+
+      body = issue.body + issue.title
+      stacktrace_tools = []
+      stacktrace = body.scan(%r{/lib/(.*?)/(.*?):([0-9]+)(.*)})
+
+      first_msg = nil
+      stacktrace.each do |tool, file_in_lib, line_nr, msg|
+        next unless TOOLS.any? { |word| tool.include?(word) }
+        # https://github.com/fastlane/fastlane/blob/master/cert/lib/cert/commands_generator.rb#L29
+        stacktrace_tools << "[#{tool}/lib/#{tool}/#{file_in_lib}:#{line_nr}](https://github.com/fastlane/fastlane/blob/master/#{tool}/lib/#{tool}/#{file_in_lib}#L#{line_nr})"
+        first_msg = msg if first_msg.nil?
+      end
+      if stacktrace_tools.length > 0
+        body = []
+        body << "<b>Found Stacktrace</b><br> <i>#{first_msg.delete("\n")}</i><br> <details><summary>Detailed </summary> <ul>"
+        stacktrace_tools.each do |tr|
+          body << "<li>#{tr}</li>"
+        end
+        body << "</ul></details>"
+        return { "icon" => "💡", "msg" => body.join("\n\n") }
+      end
+    end
+
+    # check if `use_legacy_build_api` is used
+    def process_legacy_build_api_check(issue)
+      body = issue.body + issue.title
+      if body =~ /use_legacy_build_api.*true/i
+        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) uses old legacy xcode build api"
+        body = []
+        body << "You probably using old xcode build api. `use_legacy_build_api` - please try to run your commands without this parameter (or setting it to false)"
+        return { "icon" => "🚫", "msg" => body.join("\n\n") }
+      end
+    end
+
+    # Remind people to include `fastlane env`
     def process_env_check(issue)
       body = issue.body + issue.title
       unless body.include?("Loaded fastlane plugins")
         puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report"
         body = []
         body << "It seems like you have not included the output of `fastlane env`."
-        body << "To make it easier for us help you resolve this issue, please update the issue to include the output of `fastlane env` :+1:"
-        return body.join("\n\n")
+        return { "icon" => "🚫", "msg" => body.join("\n\n") }
       end
       return nil
     end
@@ -135,8 +249,8 @@ module Fastlane
       puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing"
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
-      body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
-      return body.join("\n\n")
+      body << "Please see [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
+      return { "icon" => "🚫", "msg" => body.join("\n\n") }
     end
 
     def smart_sleep
