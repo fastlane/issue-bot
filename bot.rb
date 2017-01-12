@@ -10,8 +10,16 @@ module Fastlane
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     ISSUE_LOCK = 3 # lock all issues with no activity within the last 3 months
+    UNTOUCHED_PR_DAYS = 14
+
+    # Labels
     AWAITING_REPLY = "waiting-for-reply"
     AUTO_CLOSED = "auto-closed"
+    NEEDS_ATTENTION = 'needs-attention'
+
+    ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
+
+    NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A#{NEEDS_ATTENTION}"
 
     def client
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
@@ -19,15 +27,25 @@ module Fastlane
 
     def start
       client.auto_paginate = true
-      puts "Fetching issues from '#{SLUG}'..."
+      puts "Fetching issues and PRs from '#{SLUG}'..."
 
-      client.issues(SLUG, per_page: 30, state: "all").each do |issue|
-        next unless issue.pull_request.nil? # no PRs for now
+      needs_attention_prs = []
 
-        puts "Investigating issue ##{issue.number}..."
-        process_open_issue(issue) if issue.state == "open"
-        process_closed_issue(issue) if issue.state == "closed"
+      # issues includes PRs, and since the pull_requests API doesn't include
+      # labels, it's actually important that we query everything this way!
+      client.issues(SLUG, per_page: 100, state: "all").each do |issue|
+        if issue.pull_request.nil?
+          puts "Investigating issue ##{issue.number}..."
+          process_open_issue(issue) if issue.state == "open"
+          process_closed_issue(issue) if issue.state == "closed"
+        else
+          puts "Investigating PR ##{issue.number}..."
+          process_open_pr(issue, needs_attention_prs) if issue.state == "open"
+          process_closed_pr(issue) if issue.state == "closed" # includes merged
+        end
       end
+
+      notify_action_channel_about(needs_attention_prs)
 
       puts "[SUCCESS] I worked through issues / PRs, much faster than human beings, bots will take over"
     end
@@ -49,8 +67,65 @@ module Fastlane
       lock_old_issues(issue)
     end
 
+    def process_open_pr(pr, needs_attention_prs)
+      days_since_updated = (Time.now - pr.updated_at) / 60.0 / 60.0 / 24.0
+
+      should_have_needs_attention_label = days_since_updated > UNTOUCHED_PR_DAYS
+      has_needs_attention_label = has_label?(pr, NEEDS_ATTENTION)
+
+      if should_have_needs_attention_label
+        add_needs_attention_to(pr) if !has_needs_attention_label
+        needs_attention_prs << pr
+      elsif has_needs_attention_label
+        remove_needs_attention_from(pr)
+      end
+    end
+
+    def process_closed_pr(pr)
+      remove_needs_attention_from(pr) if has_label?(pr, NEEDS_ATTENTION)
+    end
+
+    def notify_action_channel_about(needs_attention_prs)
+      return unless needs_attention_prs.any?
+
+      puts "Notifying the Slack room about PRs that need attention..."
+
+      pr_count = needs_attention_prs.size
+      pr_pluralized = pr_count == 1 ? "PR" : "PRs"
+
+      pr_query_link = "<#{NEEDS_ATTENTION_PR_QUERY}|#{pr_count} #{pr_pluralized}>"
+
+      post_body = {
+        text: "#{pr_query_link} have not received any attention in the past #{UNTOUCHED_PR_DAYS} days."
+      }.to_json
+
+      puts post_body
+
+      response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
+
+      if response.status == 200
+        puts "Successfully notified the Slack room about PRs that need attention"
+      else
+        puts "Failed to notify the Slack room about PRs that need attention"
+      end
+    end
+
     def myself
       client.user.login
+    end
+
+    def has_label?(issue, label_name)
+      issue.labels? && !!issue.labels.find { |label| label.name == label_name }
+    end
+
+    def add_needs_attention_to(issue)
+      puts "Adding #{NEEDS_ATTENTION} label on ##{issue.number}"
+      client.add_labels_to_an_issue(SLUG, issue.number, [NEEDS_ATTENTION])
+    end
+
+    def remove_needs_attention_from(issue)
+      puts "Removing #{NEEDS_ATTENTION} label on ##{issue.number}"
+      client.remove_label(SLUG, issue.number, NEEDS_ATTENTION)
     end
 
     # Lock old, inactive conversations
@@ -87,7 +162,7 @@ module Fastlane
           body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
           client.add_comment(SLUG, issue.number, body.join("\n\n"))
           client.close_issue(SLUG, issue.number)
-          client.add_labels_to_an_issue(SLUG, issue.number, AUTO_CLOSED)
+          client.add_labels_to_an_issue(SLUG, issue.number, [AUTO_CLOSED])
         else
           # User replied, let's remove the label
           puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) was replied to by a different user"
