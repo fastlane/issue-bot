@@ -33,7 +33,7 @@ module Fastlane
 
       # issues includes PRs, and since the pull_requests API doesn't include
       # labels, it's actually important that we query everything this way!
-      client.issues(SLUG, per_page: 100, state: "all").each do |issue|
+      client.issues(SLUG, per_page: 30, state: "all").each do |issue|
         if process == :issues && issue.pull_request.nil?
           puts "Investigating issue ##{issue.number}..."
           process_open_issue(issue) if issue.state == "open"
