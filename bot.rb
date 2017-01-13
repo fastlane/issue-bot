@@ -10,7 +10,7 @@ module Fastlane
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     ISSUE_LOCK = 3 # lock all issues with no activity within the last 3 months
-    UNTOUCHED_PR_DAYS = 14
+    UNTOUCHED_PR_DAYS = 14 # threshold for marking a PR as needing attention
 
     # Labels
     AWAITING_REPLY = "waiting-for-reply"
@@ -74,7 +74,7 @@ module Fastlane
       has_needs_attention_label = has_label?(pr, NEEDS_ATTENTION)
 
       if should_have_needs_attention_label
-        add_needs_attention_to(pr) if !has_needs_attention_label
+        add_needs_attention_to(pr) unless has_needs_attention_label
         needs_attention_prs << pr
       elsif has_needs_attention_label
         remove_needs_attention_from(pr)
@@ -98,8 +98,6 @@ module Fastlane
       post_body = {
         text: "#{pr_query_link} have not received any attention in the past #{UNTOUCHED_PR_DAYS} days."
       }.to_json
-
-      puts post_body
 
       response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
 
