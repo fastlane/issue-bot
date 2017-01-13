@@ -25,7 +25,7 @@ module Fastlane
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
     end
 
-    def start(process_prs: false)
+    def start(process: :issues)
       client.auto_paginate = true
       puts "Fetching issues and PRs from '#{SLUG}'..."
 
@@ -34,11 +34,11 @@ module Fastlane
       # issues includes PRs, and since the pull_requests API doesn't include
       # labels, it's actually important that we query everything this way!
       client.issues(SLUG, per_page: 100, state: "all").each do |issue|
-        if issue.pull_request.nil?
+        if process == :issues && issue.pull_request.nil?
           puts "Investigating issue ##{issue.number}..."
           process_open_issue(issue) if issue.state == "open"
           process_closed_issue(issue) if issue.state == "closed"
-        elsif process_prs
+        elsif process == :prs && issue.pull_request
           puts "Investigating PR ##{issue.number}..."
           process_open_pr(issue, needs_attention_prs) if issue.state == "open"
           process_closed_pr(issue) if issue.state == "closed" # includes merged
