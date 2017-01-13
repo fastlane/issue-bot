@@ -25,7 +25,7 @@ module Fastlane
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
     end
 
-    def start
+    def start(process_prs: false)
       client.auto_paginate = true
       puts "Fetching issues and PRs from '#{SLUG}'..."
 
@@ -38,7 +38,7 @@ module Fastlane
           puts "Investigating issue ##{issue.number}..."
           process_open_issue(issue) if issue.state == "open"
           process_closed_issue(issue) if issue.state == "closed"
-        else
+        elsif process_prs
           puts "Investigating PR ##{issue.number}..."
           process_open_pr(issue, needs_attention_prs) if issue.state == "open"
           process_closed_pr(issue) if issue.state == "closed" # includes merged
