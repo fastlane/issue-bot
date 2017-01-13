@@ -10,7 +10,7 @@ module Fastlane
     ISSUE_WARNING = 2
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
     ISSUE_LOCK = 3 # lock all issues with no activity within the last 3 months
-    UNTOUCHED_PR_DAYS = 14 # threshold for marking a PR as needing attention
+    NEEDS_ATTENTION_PR_LIFESPAN_DAYS = 14 # threshold for marking a PR as needing attention
 
     # Labels
     AWAITING_REPLY = "waiting-for-reply"
@@ -87,16 +87,14 @@ module Fastlane
     end
 
     def process_open_pr(pr, needs_attention_prs)
-      days_since_updated = (Time.now - pr.updated_at) / 60.0 / 60.0 / 24.0
+      days_since_created = (Time.now - pr.created_at) / 60.0 / 60.0 / 24.0
 
-      should_have_needs_attention_label = days_since_updated > UNTOUCHED_PR_DAYS
+      should_have_needs_attention_label = days_since_created > NEEDS_ATTENTION_PR_LIFESPAN_DAYS
       has_needs_attention_label = has_label?(pr, NEEDS_ATTENTION)
 
-      if should_have_needs_attention_label
+      if should_have_needs_attention_label || has_needs_attention_label
         add_needs_attention_to(pr) unless has_needs_attention_label
         needs_attention_prs << pr
-      elsif has_needs_attention_label
-        remove_needs_attention_from(pr)
       end
     end
 
@@ -111,11 +109,12 @@ module Fastlane
 
       pr_count = needs_attention_prs.size
       pr_pluralized = pr_count == 1 ? "PR" : "PRs"
+      verb_pluralized = pr_count == 1 ? "has" : "have"
 
       pr_query_link = "<#{NEEDS_ATTENTION_PR_QUERY}|#{pr_count} #{pr_pluralized}>"
 
       post_body = {
-        text: "#{pr_query_link} have not received any attention in the past #{UNTOUCHED_PR_DAYS} days."
+        text: "#{pr_query_link} #{verb_pluralized} been alive for more than #{NEEDS_ATTENTION_PR_LIFESPAN_DAYS} days."
       }.to_json
 
       response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
