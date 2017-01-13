@@ -26,22 +26,41 @@ module Fastlane
     end
 
     def start(process: :issues)
-      client.auto_paginate = true
+      # Heroku is already complaining about memory size, and auto_paginate
+      # makes the client bring all of the objects into memory at once. This
+      # can only continue to get worse, since we look at every issue ever.
+      client.auto_paginate = false
+
       puts "Fetching issues and PRs from '#{SLUG}'..."
 
       needs_attention_prs = []
 
-      # issues includes PRs, and since the pull_requests API doesn't include
-      # labels, it's actually important that we query everything this way!
-      client.issues(SLUG, per_page: 30, state: "all").each do |issue|
-        if process == :issues && issue.pull_request.nil?
-          puts "Investigating issue ##{issue.number}..."
-          process_open_issue(issue) if issue.state == "open"
-          process_closed_issue(issue) if issue.state == "closed"
-        elsif process == :prs && issue.pull_request
-          puts "Investigating PR ##{issue.number}..."
-          process_open_pr(issue, needs_attention_prs) if issue.state == "open"
-          process_closed_pr(issue) if issue.state == "closed" # includes merged
+      # Doing pagination ourself is a pain, but it's important for keeping a
+      # reasonable memory footprint
+      page = 1
+      issues_page = client.issues(SLUG, per_page: 100, state: "all", page: page)
+
+      while issues_page && issues_page.any?
+        # issues includes PRs, and since the pull_requests API doesn't include
+        # labels, it's actually important that we query everything this way!
+        issues_page.each do |issue|
+          if process == :issues && issue.pull_request.nil?
+            puts "Investigating issue ##{issue.number}..."
+            process_open_issue(issue) if issue.state == "open"
+            process_closed_issue(issue) if issue.state == "closed"
+          elsif process == :prs && issue.pull_request
+            puts "Investigating PR ##{issue.number}..."
+            process_open_pr(issue, needs_attention_prs) if issue.state == "open"
+            process_closed_pr(issue) if issue.state == "closed" # includes merged
+          end
+        end
+
+        # If there's a next page, keep going
+        if client.last_response.rels[:next]
+          page += 1
+          issues_page = client.issues(SLUG, per_page: 100, state: "all", page: page)
+        else
+          issues_page = nil
         end
       end
 
