@@ -38,11 +38,13 @@ module Fastlane
       # Doing pagination ourself is a pain, but it's important for keeping a
       # reasonable memory footprint
       page = 1
-      issues_page = client.issues(SLUG, per_page: 100, state: "all", page: page)
+      issues_page = fetch_issues(page)
 
       while issues_page && issues_page.any?
-        # issues includes PRs, and since the pull_requests API doesn't include
-        # labels, it's actually important that we query everything this way!
+        # It's important that we check this immediately, as calls we make during
+        # processing will affect the last_response
+        has_next_page = !!client.last_response.rels[:next]
+
         issues_page.each do |issue|
           if process == :issues && issue.pull_request.nil?
             puts "Investigating issue ##{issue.number}..."
@@ -55,18 +57,20 @@ module Fastlane
           end
         end
 
+        page += 1
         # If there's a next page, keep going
-        if client.last_response.rels[:next]
-          page += 1
-          issues_page = client.issues(SLUG, per_page: 100, state: "all", page: page)
-        else
-          issues_page = nil
-        end
+        issues_page = has_next_page ? fetch_issues(page) : nil
       end
 
       notify_action_channel_about(needs_attention_prs)
 
       puts "[SUCCESS] I worked through issues / PRs, much faster than human beings, bots will take over"
+    end
+
+    def fetch_issues(page = 1)
+      # issues includes PRs, and since the pull_requests API doesn't include
+      # labels, it's actually important that we query everything this way!
+      client.issues(SLUG, per_page: 100, state: "all", page: page)
     end
 
     def process_open_issue(issue)
