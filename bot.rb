@@ -104,6 +104,10 @@ module Fastlane
 
     def process_closed_pr(pr)
       remove_needs_attention_from(pr) if has_label?(pr, NEEDS_ATTENTION)
+
+      # Lock old, inactive PRs (same as with issues)
+      # only for PRs that are merged of course
+      lock_old_issues(pr)
     end
 
     def notify_action_channel_about(needs_attention_prs)
