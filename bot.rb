@@ -214,7 +214,7 @@ module Fastlane
       unless body.include?("Loaded fastlane plugins")
         puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report"
         body = []
-        body << "It seems like you have not included the output of `fastlane env`."
+        body << "It seems like you have not included the output of `fastlane env`"
         body << "To make it easier for us help you resolve this issue, please update the issue to include the output of `fastlane env` :+1:"
         return body.join("\n\n")
       end
