@@ -276,9 +276,8 @@ module Fastlane
     # }
     def map_prs_to_releases(releases)
       prs_to_releases = {}
-      releases = releases.select { |r| !r.draft && !r.prerelease }
+      releases = releases.select { |r| !r.draft && !r.prerelease && !r.body.nil? && !r.tag_name.nil? }
       releases.each do |release|
-        next if release.body.nil? || release.tag_name.nil?
         collect_pr_references_from(release, prs_to_releases)
       end
       prs_to_releases
