@@ -16,6 +16,7 @@ module Fastlane
     AWAITING_REPLY = "waiting-for-reply"
     AUTO_CLOSED = "auto-closed"
     NEEDS_ATTENTION = 'needs-attention'
+    RELEASED = 'released'
 
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
@@ -30,6 +31,12 @@ module Fastlane
       # makes the client bring all of the objects into memory at once. This
       # can only continue to get worse, since we look at every issue ever.
       client.auto_paginate = false
+
+      puts "Fetching release information for '#{SLUG}'..."
+      # We only want to consider the 5 most recent releases, so no sense downloading more data than that.
+      # We consider the 5 most recent in case we have done multiple releases since the last run of the bot.
+      releases = client.releases("fastlane/fastlane", per_page: 5)
+      prs_to_releases = map_prs_to_releases(releases)
 
       puts "Fetching issues and PRs from '#{SLUG}'..."
 
@@ -53,7 +60,7 @@ module Fastlane
           elsif process == :prs && issue.pull_request
             puts "Investigating PR ##{issue.number}..."
             process_open_pr(issue, needs_attention_prs) if issue.state == "open"
-            process_closed_pr(issue) if issue.state == "closed" # includes merged
+            process_closed_pr(issue, prs_to_releases) if issue.state == "closed" # includes merged
           end
         end
 
@@ -102,8 +109,12 @@ module Fastlane
       end
     end
 
-    def process_closed_pr(pr)
+    def process_closed_pr(pr, prs_to_releases)
       remove_needs_attention_from(pr) if has_label?(pr, NEEDS_ATTENTION)
+
+      if prs_to_releases.key?(pr.number.to_s) && !has_label?(pr, RELEASED)
+        mark_as_released(pr, prs_to_releases)
+      end
 
       # Lock old, inactive PRs (same as with issues)
       # only for PRs that are merged of course
@@ -150,6 +161,16 @@ module Fastlane
     def remove_needs_attention_from(issue)
       puts "Removing #{NEEDS_ATTENTION} label on ##{issue.number}"
       client.remove_label(SLUG, issue.number, NEEDS_ATTENTION)
+    end
+
+    def mark_as_released(pr, prs_to_releases)
+      version = prs_to_releases[pr.number.to_s]
+      release_url = "https://github.com/fastlane/fastlane/releases/tag/#{version}"
+
+      puts "Marking #{pr.number} as having been released in version #{version}"
+
+      client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
+      client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
     end
 
     # Lock old, inactive conversations
@@ -240,6 +261,38 @@ module Fastlane
 
     def smart_sleep
       sleep 5
+    end
+
+    # Create a hash of PR numbers (as strings) to release tag names indicating in which release
+    # a given PR was mentioned in the release notes. For example:
+    #
+    # {
+    #   "8594"=>"2.22.0",
+    #   "8592"=>"2.22.0",
+    #   "8595"=>"2.22.0",
+    #   "8593"=>"2.21.0",
+    #   "8596"=>"2.21.0",
+    #   "8564"=>"2.20.0"
+    # }
+    def map_prs_to_releases(releases)
+      prs_to_releases = {}
+      releases = releases.select { |r| !r.draft && !r.prerelease && !r.body.nil? && !r.tag_name.nil? }
+      releases.each do |release|
+        collect_pr_references_from(release, prs_to_releases)
+      end
+      prs_to_releases
+    end
+
+    # Populate the provided prs_to_releases hash with the PR references found in the given release's
+    # release notes
+    def collect_pr_references_from(release, prs_to_releases)
+      release.body.split("\n").each do |item|
+        pr_number_match = item.match(/\(#(\d+)\)/)
+        if pr_number_match
+          pr_number = pr_number_match[1]
+          prs_to_releases[pr_number] = release.tag_name
+        end
+      end
     end
   end
 end
