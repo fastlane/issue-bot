@@ -287,10 +287,18 @@ module Fastlane
     # release notes
     def collect_pr_references_from(release, prs_to_releases)
       release.body.split("\n").each do |item|
-        pr_number_match = item.match(/\(#(\d+)\)/)
+        # matches:
+        #   (#8324)
+        #   (#8324,#8325)
+        #   (#8324, #8325)
+        #   (#8324,#8325,#8326)
+        #   (#8324, #8325, #8326)
+        # etc.
+        pr_number_match = item.match(/\(#(\d+)(?:,\s?#(\d+))*\)/)
         if pr_number_match
-          pr_number = pr_number_match[1]
-          prs_to_releases[pr_number] = release.tag_name
+          pr_number_match.captures.each do |pr_number|
+            prs_to_releases[pr_number] = release.tag_name
+          end
         end
       end
     end
