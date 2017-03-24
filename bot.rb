@@ -278,27 +278,34 @@ module Fastlane
       prs_to_releases = {}
       releases = releases.select { |r| !r.draft && !r.prerelease && !r.body.nil? && !r.tag_name.nil? }
       releases.each do |release|
-        collect_pr_references_from(release, prs_to_releases)
+        collect_pr_references_from_release(release, prs_to_releases)
       end
       prs_to_releases
     end
 
     # Populate the provided prs_to_releases hash with the PR references found in the given release's
     # release notes
-    def collect_pr_references_from(release, prs_to_releases)
-      release.body.split("\n").each do |item|
-        # matches:
-        #   (#8324)
-        #   (#8324,#8325)
-        #   (#8324, #8325)
-        #   (#8324,#8325,#8326)
-        #   (#8324, #8325, #8326)
-        # etc.
-        pr_number_match = item.match(/\(#(\d+)(?:,\s?#(\d+))*\)/)
-        if pr_number_match
-          pr_number_match.captures.each do |pr_number|
-            prs_to_releases[pr_number] = release.tag_name
-          end
+    def collect_pr_references_from_release(release, prs_to_releases)
+      release.body.split("\n").each do |line|
+        collect_pr_references_from_line(line, release.tag_name, prs_to_releases)
+      end
+    end
+
+    def collect_pr_references_from_line(line, release_name, prs_to_releases)
+      # matches:
+      #   (#8324)
+      #   (#8324,#8325)
+      #   (#8324, #8325)
+      #   (#8324,#8325,#8326)
+      #   (#8324, #8325, #8326)
+      # etc.
+      # captures inside the parens
+      #   #8324, #8325, #8326
+      pr_numbers_match = line.match(/\((#\d+(?:,\s*#\d+)*)\)/)
+      if pr_numbers_match
+        pr_numbers = pr_numbers_match[1].split(/,\s*/).map { |n| n.sub('#', '') }
+        pr_numbers.each do |pr_number|
+          prs_to_releases[pr_number] = release_name
         end
       end
     end
