@@ -129,15 +129,7 @@ module Fastlane
         hours_pr_was_merged_ago = (Time.now - pr_details.merged_at) / 60.0 / 60.0 if pr_details.merged_at
 
         if hours_pr_was_merged_ago && hours_pr_was_merged_ago < 24
-          congrats_on_merging = []
-          congrats_on_merging << "Hey @#{pr.user.login} :wave:\n"
-          congrats_on_merging << "Thank you for your contribution to _fastlane_ and congrats on getting this pull request merged :tada:"
-          congrats_on_merging << "The code change now lives in the `master` branch, however it wasn't released to [RubyGems](https://rubygems.org/gems/fastlane) yet."
-          congrats_on_merging << "We usually ship about once a week, and your PR will be included in the next one.\n"
-          congrats_on_merging << "Please let us know if this change requires an immediate release by adding a comment here :+1:"
-          congrats_on_merging << "We'll notify you once we shipped a new release with your changes :rocket:"
-          client.add_comment(SLUG, pr.number, congrats_on_merging.join("\n"))
-          client.add_labels_to_an_issue(SLUG, pr.number, [INCLUDED_IN_NEXT_RELEASE])
+          mark_as_merged(pr)
         end
       end
 
@@ -186,6 +178,18 @@ module Fastlane
     def remove_needs_attention_from(issue)
       puts "Removing #{NEEDS_ATTENTION} label on ##{issue.number}"
       client.remove_label(SLUG, issue.number, NEEDS_ATTENTION)
+    end
+
+    def mark_as_merged(pr)
+      congrats_on_merging = []
+      congrats_on_merging << "Hey @#{pr.user.login} :wave:\n"
+      congrats_on_merging << "Thank you for your contribution to _fastlane_ and congrats on getting this pull request merged :tada:"
+      congrats_on_merging << "The code change now lives in the `master` branch, however it wasn't released to [RubyGems](https://rubygems.org/gems/fastlane) yet."
+      congrats_on_merging << "We usually ship about once a week, and your PR will be included in the next one.\n"
+      congrats_on_merging << "Please let us know if this change requires an immediate release by adding a comment here :+1:"
+      congrats_on_merging << "We'll notify you once we shipped a new release with your changes :rocket:"
+      client.add_comment(SLUG, pr.number, congrats_on_merging.join("\n"))
+      client.add_labels_to_an_issue(SLUG, pr.number, [INCLUDED_IN_NEXT_RELEASE])
     end
 
     def mark_as_released(pr, prs_to_releases)
