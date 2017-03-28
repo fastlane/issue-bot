@@ -202,6 +202,7 @@ module Fastlane
       client.remove_label(SLUG, issue.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(issue, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
       client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
+      smart_sleep
     end
 
     # Lock old, inactive conversations
