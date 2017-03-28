@@ -17,6 +17,7 @@ module Fastlane
     AUTO_CLOSED = "auto-closed"
     NEEDS_ATTENTION = 'needs-attention'
     RELEASED = 'released'
+    INCLUDED_IN_NEXT_RELEASE = 'included-in-next-release'
 
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
@@ -116,6 +117,22 @@ module Fastlane
         mark_as_released(pr, prs_to_releases)
       end
 
+      # Check if that PR *just* got merged, and add a comment about that
+      # merged != shipped
+      # First check if the labels and closed date are ok, only then we check for the PR details
+      hours_pr_was_closed_ago = (Time.now - pr.closed_at) / 60.0 / 60.0
+      if !has_label?(pr, RELEASED) && !has_label?(pr, INCLUDED_IN_NEXT_RELEASE) && hours_pr_was_closed_ago < 24
+        # Without checking the closed_at time first, we'd send thousands of extra requests
+        # We only want to fetch the PR details for PRs where it makes sense, and where we want to check
+        # if the PR ended up being merged
+        pr_details = client.pull_request(SLUG, pr.number) # as the issue metadata doesn't contain that information
+        hours_pr_was_merged_ago = (Time.now - pr_details.merged_at) / 60.0 / 60.0 if pr_details.merged_at
+
+        if hours_pr_was_merged_ago && hours_pr_was_merged_ago < 24
+          mark_as_merged(pr)
+        end
+      end
+
       # Lock old, inactive PRs (same as with issues)
       # only for PRs that are merged of course
       lock_old_issues(pr)
@@ -163,12 +180,25 @@ module Fastlane
       client.remove_label(SLUG, issue.number, NEEDS_ATTENTION)
     end
 
+    def mark_as_merged(pr)
+      congrats_on_merging = []
+      congrats_on_merging << "Hey @#{pr.user.login} :wave:\n"
+      congrats_on_merging << "Thank you for your contribution to _fastlane_ and congrats on getting this pull request merged :tada:"
+      congrats_on_merging << "The code change now lives in the `master` branch, however it wasn't released to [RubyGems](https://rubygems.org/gems/fastlane) yet."
+      congrats_on_merging << "We usually ship about once a week, and your PR will be included in the next one.\n"
+      congrats_on_merging << "Please let us know if this change requires an immediate release by adding a comment here :+1:"
+      congrats_on_merging << "We'll notify you once we shipped a new release with your changes :rocket:"
+      client.add_comment(SLUG, pr.number, congrats_on_merging.join("\n"))
+      client.add_labels_to_an_issue(SLUG, pr.number, [INCLUDED_IN_NEXT_RELEASE])
+    end
+
     def mark_as_released(pr, prs_to_releases)
       version = prs_to_releases[pr.number.to_s]
       release_url = "https://github.com/fastlane/fastlane/releases/tag/#{version}"
 
       puts "Marking #{pr.number} as having been released in version #{version}"
 
+      client.remove_label(SLUG, issue.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(issue, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
       client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
     end
