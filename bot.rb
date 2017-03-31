@@ -199,7 +199,7 @@ module Fastlane
 
       puts "Marking #{pr.number} as having been released in version #{version}"
 
-      client.remove_label(SLUG, issue.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(issue, INCLUDED_IN_NEXT_RELEASE)
+      client.remove_label(SLUG, pr.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
       client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
       smart_sleep
