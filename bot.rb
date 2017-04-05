@@ -236,7 +236,7 @@ module Fastlane
           # No reply from the user, let's close the issue
           puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
           body = []
-          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem 👍"
+          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem :+1:"
           client.add_comment(SLUG, issue.number, body.join("\n\n"))
           client.close_issue(SLUG, issue.number)
           client.add_labels_to_an_issue(SLUG, issue.number, [AUTO_CLOSED])
