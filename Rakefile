@@ -1,6 +1,8 @@
 require_relative 'bot'
 require 'logger'
 
+$stdout.sync = true
+
 task :process_issues do
   logging_exceptions do |logger|
     Fastlane::Bot.new(logger).start(process: :issues)
