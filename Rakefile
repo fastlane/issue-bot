@@ -2,24 +2,14 @@ require_relative 'bot'
 require 'logger'
 
 task :process_issues do
-  logger = Logger.new(logger_path('process_issues.log'))
-  begin
+  logging_exceptions do |logger|
     Fastlane::Bot.new(logger).start(process: :issues)
-  rescue => ex
-    logger.fatal(ex.to_s)
-    logger.fatal(ex.backtrace.join("\n"))
-    raise ex
   end
 end
 
 task :process_prs do
-  logger = Logger.new(logger_path('process_prs.log'))
-  begin
+  logging_exceptions do |logger|
     Fastlane::Bot.new(logger).start(process: :prs)
-  rescue => ex
-    logger.fatal(ex.to_s)
-    logger.fatal(ex.backtrace.join("\n"))
-    raise ex
   end
 end
 
@@ -28,8 +18,7 @@ task :post_unreleased_changes do
   require 'json'
   require 'excon'
 
-  logger = Logger.new(logger_path('post_unreleased_changes.log'))
-  begin
+  logging_exceptions do |logger|
     url = "https://rubygems.org/api/v1/gems/fastlane.json"
     rubygems_data = JSON.parse(open(url).read)
     live_version = rubygems_data["version"]
@@ -62,6 +51,13 @@ task :post_unreleased_changes do
     else
       logger.info("Failed to notify the Slack room about PRs that need attention")
     end
+  end
+end
+
+def logging_exceptions
+  logger = Logger.new(logger_path('process_issues.log'))
+  begin
+    yield logger if block_given?
   rescue => ex
     logger.fatal(ex.to_s)
     logger.fatal(ex.backtrace.join("\n"))
