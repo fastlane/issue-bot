@@ -23,6 +23,12 @@ module Fastlane
 
     NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A#{NEEDS_ATTENTION}"
 
+    attr_reader :logger
+
+    def initialize(logger)
+      @logger = logger
+    end
+
     def client
       @client ||= Octokit::Client.new(access_token: ENV["GITHUB_API_TOKEN"])
     end
@@ -33,13 +39,13 @@ module Fastlane
       # can only continue to get worse, since we look at every issue ever.
       client.auto_paginate = false
 
-      puts "Fetching release information for '#{SLUG}'..."
+      logger.info("Fetching release information for '#{SLUG}'...")
       # We only want to consider the 5 most recent releases, so no sense downloading more data than that.
       # We consider the 5 most recent in case we have done multiple releases since the last run of the bot.
       releases = client.releases("fastlane/fastlane", per_page: 5)
       prs_to_releases = map_prs_to_releases(releases)
 
-      puts "Fetching issues and PRs from '#{SLUG}'..."
+      logger.info("Fetching issues and PRs from '#{SLUG}'...")
 
       needs_attention_prs = []
 
@@ -55,11 +61,11 @@ module Fastlane
 
         issues_page.each do |issue|
           if process == :issues && issue.pull_request.nil?
-            puts "Investigating issue ##{issue.number}..."
+            logger.info("Investigating issue ##{issue.number}...")
             process_open_issue(issue) if issue.state == "open"
             process_closed_issue(issue) if issue.state == "closed"
           elsif process == :prs && issue.pull_request
-            puts "Investigating PR ##{issue.number}..."
+            logger.info("Investigating PR ##{issue.number}...")
             process_open_pr(issue, needs_attention_prs) if issue.state == "open"
             process_closed_pr(issue, prs_to_releases) if issue.state == "closed" # includes merged
           end
@@ -72,7 +78,7 @@ module Fastlane
 
       notify_action_channel_about(needs_attention_prs)
 
-      puts "[SUCCESS] I worked through issues / PRs, much faster than human beings, bots will take over"
+      logger.info("[SUCCESS] I worked through issues / PRs, much faster than human beings, bots will take over")
     end
 
     def fetch_issues(page = 1)
@@ -142,7 +148,7 @@ module Fastlane
     def notify_action_channel_about(needs_attention_prs)
       return unless needs_attention_prs.any?
 
-      puts "Notifying the Slack room about PRs that need attention..."
+      logger.info("Notifying the Slack room about PRs that need attention...")
 
       pr_count = needs_attention_prs.size
       pr_pluralized = pr_count == 1 ? "PR" : "PRs"
@@ -157,9 +163,9 @@ module Fastlane
       response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
 
       if response.status == 200
-        puts "Successfully notified the Slack room about PRs that need attention"
+        logger.info("Successfully notified the Slack room about PRs that need attention")
       else
-        puts "Failed to notify the Slack room about PRs that need attention"
+        logger.info("Failed to notify the Slack room about PRs that need attention")
       end
     end
 
@@ -172,12 +178,12 @@ module Fastlane
     end
 
     def add_needs_attention_to(issue)
-      puts "Adding #{NEEDS_ATTENTION} label on ##{issue.number}"
+      logger.info("Adding #{NEEDS_ATTENTION} label on ##{issue.number}")
       client.add_labels_to_an_issue(SLUG, issue.number, [NEEDS_ATTENTION])
     end
 
     def remove_needs_attention_from(issue)
-      puts "Removing #{NEEDS_ATTENTION} label on ##{issue.number}"
+      logger.info("Removing #{NEEDS_ATTENTION} label on ##{issue.number}")
       client.remove_label(SLUG, issue.number, NEEDS_ATTENTION)
     end
 
@@ -197,7 +203,7 @@ module Fastlane
       version = prs_to_releases[pr.number.to_s]
       release_url = "https://github.com/fastlane/fastlane/releases/tag/#{version}"
 
-      puts "Marking #{pr.number} as having been released in version #{version}"
+      logger.info("Marking #{pr.number} as having been released in version #{version}")
 
       client.remove_label(SLUG, pr.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
@@ -213,7 +219,7 @@ module Fastlane
 
       return if diff_in_months < ISSUE_LOCK
 
-      puts "Locking conversations for https://github.com/#{SLUG}/issues/#{issue.number} since it hasn't been updated in #{diff_in_months.round} months"
+      logger.info("Locking conversations for https://github.com/#{SLUG}/issues/#{issue.number} since it hasn't been updated in #{diff_in_months.round} months")
       # Currently in beta https://developer.github.com/changes/2016-02-11-issue-locking-api/
       cmd = "curl 'https://api.github.com/repos/#{SLUG}/issues/#{issue.number}/lock' \
             -X PUT \
@@ -221,7 +227,7 @@ module Fastlane
             -H 'Content-Length: 0' \
             -H 'Accept: application/vnd.github.the-key-preview'"
       `#{cmd} > /dev/null`
-      puts "Done locking the conversation"
+      logger.info("Done locking the conversation")
       smart_sleep
     end
 
@@ -234,7 +240,7 @@ module Fastlane
         # We sent off a warning, but we have to check if the user replied
         if client.issue_comments(SLUG, issue.number).last.user.login == myself
           # No reply from the user, let's close the issue
-          puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now"
+          logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now")
           body = []
           body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem :+1:"
           client.add_comment(SLUG, issue.number, body.join("\n\n"))
@@ -242,14 +248,14 @@ module Fastlane
           client.add_labels_to_an_issue(SLUG, issue.number, [AUTO_CLOSED])
         else
           # User replied, let's remove the label
-          puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) was replied to by a different user"
+          logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) was replied to by a different user")
           client.remove_label(SLUG, issue.number, AWAITING_REPLY)
         end
         smart_sleep
       elsif diff_in_months > ISSUE_WARNING
         return if issue.labels.find { |a| a.name == AWAITING_REPLY }
 
-        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, pinging now"
+        logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, pinging now")
         body = []
         body << "There hasn't been any activity on this issue recently. Due to the high number of incoming GitHub notifications, we have to clean some of the old issues, as many of them have already been resolved with the latest updates."
         body << "Please make sure to update to the latest `fastlane` version and check if that solves the issue. Let us know if that works for you by adding a comment :+1:"
@@ -265,7 +271,7 @@ module Fastlane
     def process_env_check(issue)
       body = issue.body + issue.title
       unless body.include?("Loaded fastlane plugins")
-        puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report"
+        logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report")
         body = []
         body << "It seems like you have not included the output of `fastlane env`"
         body << "To make it easier for us help you resolve this issue, please update the issue to include the output of `fastlane env` :+1:"
@@ -284,7 +290,7 @@ module Fastlane
       return nil if signing_related.count == 0
 
       url = "https://docs.fastlane.tools/codesigning/getting-started/"
-      puts "https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing"
+      logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing")
       body = []
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
       body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
