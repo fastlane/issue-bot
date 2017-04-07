@@ -4,13 +4,13 @@ require 'logger'
 $stdout.sync = true
 
 task :process_issues do
-  logging_exceptions do |logger|
+  logging_exceptions('process-issues.log') do |logger|
     Fastlane::Bot.new(logger).start(process: :issues)
   end
 end
 
 task :process_prs do
-  logging_exceptions do |logger|
+  logging_exceptions('process-prs.log') do |logger|
     Fastlane::Bot.new(logger).start(process: :prs)
   end
 end
@@ -20,7 +20,7 @@ task :post_unreleased_changes do
   require 'json'
   require 'excon'
 
-  logging_exceptions do |logger|
+  logging_exceptions('post-unreleased-changes.log') do |logger|
     url = "https://rubygems.org/api/v1/gems/fastlane.json"
     rubygems_data = JSON.parse(open(url).read)
     live_version = rubygems_data["version"]
@@ -56,8 +56,8 @@ task :post_unreleased_changes do
   end
 end
 
-def logging_exceptions
-  logger = Logger.new(logger_path('process_issues.log'))
+def logging_exceptions(name)
+  logger = Logger.new(logger_path(name))
   begin
     yield logger if block_given?
   rescue => ex
