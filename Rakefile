@@ -1,5 +1,6 @@
 require_relative 'bot'
 require 'logger'
+require 'logstash-logger'
 
 $stdout.sync = true
 
@@ -57,7 +58,7 @@ task :post_unreleased_changes do
 end
 
 def logging_exceptions(name)
-  logger = Logger.new(logger_path(name))
+  logger = create_logger(name)
   begin
     yield logger if block_given?
   rescue => ex
@@ -67,6 +68,10 @@ def logging_exceptions(name)
   end
 end
 
-def logger_path(name)
-  ENV['FASTLANE_ISSUE_BOT_LOG_PATH'] ? File.join(ENV['FASTLANE_ISSUE_BOT_LOG_PATH'], name) : STDOUT
+def create_logger(name)
+  if ENV['FASTLANE_ISSUE_BOT_LOG_PATH']
+    LogStashLogger.new(type: :file, path: File.join(ENV['FASTLANE_ISSUE_BOT_LOG_PATH'], name), sync: true)
+  else
+    Logger.new(STDOUT)
+  end
 end
