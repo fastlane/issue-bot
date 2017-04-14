@@ -120,29 +120,49 @@ module Fastlane
     def process_closed_pr(pr, prs_to_releases)
       remove_needs_attention_from(pr) if has_label?(pr, NEEDS_ATTENTION)
 
+      # When we mark something as released, it doesn't update the already in-memory representation
+      # of that PR. So we need to keep track of whether we just marked as released, so that we don't
+      # immediately also mark it as merged.
+      just_marked_released = false
+
       if prs_to_releases.key?(pr.number.to_s) && !has_label?(pr, RELEASED)
         mark_as_released(pr, prs_to_releases)
+        just_marked_released = true
       end
 
-      # Check if that PR *just* got merged, and add a comment about that
-      # merged != shipped
-      # First check if the labels and closed date are ok, only then we check for the PR details
-      hours_pr_was_closed_ago = (Time.now - pr.closed_at) / 60.0 / 60.0
-      if !has_label?(pr, RELEASED) && !has_label?(pr, INCLUDED_IN_NEXT_RELEASE) && hours_pr_was_closed_ago < 24
-        # Without checking the closed_at time first, we'd send thousands of extra requests
-        # We only want to fetch the PR details for PRs where it makes sense, and where we want to check
-        # if the PR ended up being merged
-        pr_details = client.pull_request(SLUG, pr.number) # as the issue metadata doesn't contain that information
-        hours_pr_was_merged_ago = (Time.now - pr_details.merged_at) / 60.0 / 60.0 if pr_details.merged_at
-
-        if hours_pr_was_merged_ago && hours_pr_was_merged_ago < 24
-          mark_as_merged(pr)
-        end
+      # If we just marked this PR as released, we can skip saying that it was merged
+      if !just_marked_released && should_mark_as_merged?(pr)
+        mark_as_merged(pr)
       end
 
       # Lock old, inactive PRs (same as with issues)
       # only for PRs that are merged of course
       lock_old_issues(pr)
+    end
+
+    def should_mark_as_merged?(pr)
+      now = Time.now
+
+      # In order to avoid marking all PRs since the beginning of time, we need to make sure
+      # that the PR was merged recently. However, the merged_at field is not available on the
+      # basic "issue" object from GitHub (our PR object is actually an "issue")
+      #
+      # To get the merged_at date, we'll need to make another web request, so to cut down on the
+      # number of requests that get made, we'll first check the closed_at date to eliminate
+      # PRs we don't need to consider.
+      hours_pr_was_closed_ago = (now - pr.closed_at) / 60.0 / 60.0
+      return false unless hours_pr_was_closed_ago < 24
+
+      # Now we're reasonably sure we need to check the merged_at date for this PR, so fetch the details
+      pr_details = client.pull_request(SLUG, pr.number) # as the issue metadata doesn't contain that information
+      # If the PR wasn't merged, we don't need to consider it
+      return false unless pr_details.merged_at
+
+      # The final stage of our safety check skips PRs that were merged, but not recently
+      hours_pr_was_merged_ago = (now - pr_details.merged_at) / 60.0 / 60.0
+      return false unless hours_pr_was_merged_ago < 24
+
+      return !has_label?(pr, RELEASED) && !has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
     end
 
     def notify_action_channel_about(needs_attention_prs)
@@ -205,6 +225,8 @@ module Fastlane
 
       logger.info("Marking #{pr.number} as having been released in version #{version}")
 
+      # This doesn't wind up modifying the in-memory object, so we will still find this label applied
+      # when we check for it in the next step.
       client.remove_label(SLUG, pr.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
       client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
