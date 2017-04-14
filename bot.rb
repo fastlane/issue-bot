@@ -130,6 +130,7 @@ module Fastlane
         just_marked_released = true
       end
 
+      # If we just marked this PR as released, we can skip saying that it was merged
       if !just_marked_released && should_mark_as_merged?(pr)
         mark_as_merged(pr)
       end
@@ -142,22 +143,23 @@ module Fastlane
     def should_mark_as_merged?(pr)
       now = Time.now
 
-      # Check if that PR *just* got merged, and add a comment about that
-      # merged != shipped
-      # First check if the labels and closed date are ok, only then we check for the PR details
+      # In order to avoid marking all PRs since the beginning of time, we need to make sure
+      # that the PR was merged recently. However, the merged_at field is not available on the
+      # basic "issue" object from GitHub (our PR object is actually an "issue")
+      #
+      # To get the merged_at date, we'll need to make another web request, so to cut down on the
+      # number of requests that get made, we'll first check the closed_at date to eliminate
+      # PRs we don't need to consider.
       hours_pr_was_closed_ago = (now - pr.closed_at) / 60.0 / 60.0
-
       return false unless hours_pr_was_closed_ago < 24
 
-      # Without checking the closed_at time first, we'd send thousands of extra requests
-      # We only want to fetch the PR details for PRs where it makes sense, and where we want to check
-      # if the PR ended up being merged
+      # Now we're reasonably sure we need to check the merged_at date for this PR, so fetch the details
       pr_details = client.pull_request(SLUG, pr.number) # as the issue metadata doesn't contain that information
-
+      # If the PR wasn't merged, we don't need to consider it
       return false unless pr_details.merged_at
 
+      # The final stage of our safety check skips PRs that were merged, but not recently
       hours_pr_was_merged_ago = (now - pr_details.merged_at) / 60.0 / 60.0
-
       return false unless hours_pr_was_merged_ago < 24
 
       return !has_label?(pr, RELEASED) && !has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
