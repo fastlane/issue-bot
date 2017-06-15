@@ -17,7 +17,7 @@ module Fastlane
     AUTO_CLOSED = "status: auto-closed"
     NEEDS_ATTENTION = 'status: needs-attention'
     RELEASED = 'status: released'
-    INCLUDED_IN_NEXT_RELEASE = 'included-in-next-release'
+    INCLUDED_IN_NEXT_RELEASE = 'status: included-in-next-release'
 
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
