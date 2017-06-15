@@ -13,10 +13,10 @@ module Fastlane
     NEEDS_ATTENTION_PR_LIFESPAN_DAYS = 14 # threshold for marking a PR as needing attention
 
     # Labels
-    AWAITING_REPLY = "waiting-for-reply"
-    AUTO_CLOSED = "auto-closed"
-    NEEDS_ATTENTION = 'needs-attention'
-    RELEASED = 'released'
+    AWAITING_REPLY = "status: waiting-for-reply"
+    AUTO_CLOSED = "status: auto-closed"
+    NEEDS_ATTENTION = 'status: needs-attention'
+    RELEASED = 'status: released'
     INCLUDED_IN_NEXT_RELEASE = 'included-in-next-release'
 
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
