@@ -21,7 +21,7 @@ module Fastlane
 
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
-    NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A#{NEEDS_ATTENTION}"
+    NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A%22#{NEEDS_ATTENTION}%22"
 
     attr_reader :logger
 
