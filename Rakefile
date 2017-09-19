@@ -16,6 +16,13 @@ task :process_prs do
   end
 end
 
+# A job that will post incoming regression issues on Slack
+task :find_regressions do
+  logging_exceptions('process-prs.log') do |logger|
+    Fastlane::Bot.new(logger).start(process: :regressions)
+  end
+end
+
 task :post_unreleased_changes do
   require 'open-uri'
   require 'json'
