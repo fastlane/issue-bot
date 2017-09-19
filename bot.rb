@@ -7,9 +7,9 @@ require 'json'
 module Fastlane
   class Bot
     SLUG = "fastlane/fastlane"
-    ISSUE_WARNING = 2
+    ISSUE_WARNING = 1.5 # in months
     ISSUE_CLOSED = 0.3 # plus the x months from ISSUE_WARNING
-    ISSUE_LOCK = 3 # lock all issues with no activity within the last 3 months
+    ISSUE_LOCK = 2 # lock all issues with no activity within the last 3 months
     NEEDS_ATTENTION_PR_LIFESPAN_DAYS = 14 # threshold for marking a PR as needing attention
 
     # Labels
