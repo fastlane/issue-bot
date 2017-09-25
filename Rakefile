@@ -18,7 +18,7 @@ end
 
 # A job that will post incoming regression issues on Slack
 task :find_regressions do
-  logging_exceptions('process-prs.log') do |logger|
+  logging_exceptions('find-regressions.log') do |logger|
     Fastlane::Bot.new(logger).start(process: :regressions)
   end
 end
