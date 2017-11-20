@@ -278,7 +278,7 @@ module Fastlane
       warning_sent = !!issue.labels.find { |a| a.name == AWAITING_REPLY }
       if warning_sent && diff_in_months > ISSUE_CLOSED
         # We sent off a warning, but we have to check if the user replied
-        if client.issue_comments(SLUG, issue.number).last.user.login == myself
+        if last_responding_user(issue) == myself
           # No reply from the user, let's close the issue
           logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now")
           body = []
@@ -335,6 +335,13 @@ module Fastlane
       body << "It seems like this issue might be related to code signing :no_entry_sign:"
       body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
       return body.join("\n\n")
+    end
+
+    def last_responding_user(issue)
+      client.issue_comments(SLUG, issue.number)
+      link_to_last_page = client.last_response.rels[:last]
+      last_comment_page = link_to_last_page.get.data
+      last_comment_page.last.user.login
     end
 
     def smart_sleep
