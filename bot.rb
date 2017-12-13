@@ -109,9 +109,13 @@ module Fastlane
       bot_actions = []
       process_inactive(issue)
 
-      return if issue.comments > 0 # there maybe already some bot replies
+      # return if issue.comments > 0 # there maybe already some bot replies
       bot_actions << process_code_signing(issue)
-      bot_actions << process_env_check(issue)
+      # bot_actions << process_env_check(issue)
+
+      new_body = fix_checkboxes(issue.body)
+
+      client.update_issue(SLUG, issue.number, issue.title, new_body)
 
       bot_actions.each do |bot_reply|
         client.add_comment(SLUG, issue.number, bot_reply) if bot_reply.to_s.length > 0
@@ -133,6 +137,10 @@ module Fastlane
         add_needs_attention_to(pr) unless has_needs_attention_label
         needs_attention_prs << pr
       end
+
+      new_body = fix_checkboxes(pr.body)
+
+      client.update_issue(SLUG, pr.number, pr.title, new_body)
     end
 
     def process_closed_pr(pr, prs_to_releases)
@@ -393,6 +401,10 @@ module Fastlane
           prs_to_releases[pr_number] = release_name
         end
       end
+    end
+
+    def fix_checkboxes(text)
+      return text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
     end
   end
 end
