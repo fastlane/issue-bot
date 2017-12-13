@@ -1,8 +1,9 @@
+require 'colored'
+require 'date'
+require 'excon'
+require 'json'
 require 'octokit'
 require 'pry'
-require 'excon'
-require 'colored'
-require 'json'
 
 module Fastlane
   class Bot
