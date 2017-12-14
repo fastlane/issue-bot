@@ -115,7 +115,7 @@ module Fastlane
 
       new_body = fix_checkboxes(issue.body)
 
-      client.update_issue(SLUG, issue.number, issue.title, new_body)
+      client.update_issue(SLUG, issue.number, issue.title, new_body) unless new_body.nil?
 
       bot_actions.each do |bot_reply|
         client.add_comment(SLUG, issue.number, bot_reply) if bot_reply.to_s.length > 0
@@ -140,7 +140,7 @@ module Fastlane
 
       new_body = fix_checkboxes(pr.body)
 
-      client.update_issue(SLUG, pr.number, pr.title, new_body)
+      client.update_issue(SLUG, pr.number, pr.title, new_body) unless new_body.nil?
     end
 
     def process_closed_pr(pr, prs_to_releases)
@@ -404,7 +404,9 @@ module Fastlane
     end
 
     def fix_checkboxes(text)
-      return text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
+      new_text = text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
+
+      return new_text if new_text != text else nil
     end
   end
 end
