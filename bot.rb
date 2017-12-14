@@ -109,9 +109,9 @@ module Fastlane
       bot_actions = []
       process_inactive(issue)
 
-      # return if issue.comments > 0 # there maybe already some bot replies
+      return if issue.comments > 0 # there maybe already some bot replies
       bot_actions << process_code_signing(issue)
-      # bot_actions << process_env_check(issue)
+      bot_actions << process_env_check(issue)
 
       new_body = fix_checkboxes(issue.body)
 
