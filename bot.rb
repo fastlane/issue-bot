@@ -43,7 +43,7 @@ module Fastlane
       logger.info("Fetching release information for '#{SLUG}'...")
       # We only want to consider the 5 most recent releases, so no sense downloading more data than that.
       # We consider the 5 most recent in case we have done multiple releases since the last run of the bot.
-      releases = client.releases("fastlane/fastlane", per_page: 5)
+      releases = client.releases(SLUG, per_page: 5)
       prs_to_releases = map_prs_to_releases(releases)
 
       logger.info("Fetching issues and PRs from '#{SLUG}'...")
@@ -109,9 +109,13 @@ module Fastlane
       bot_actions = []
       process_inactive(issue)
 
-      return if issue.comments > 0 # there maybe already some bot replys
+      return if issue.comments > 0 # there maybe already some bot replies
       bot_actions << process_code_signing(issue)
       bot_actions << process_env_check(issue)
+
+      new_body = fix_checkboxes(issue.body)
+
+      client.update_issue(SLUG, issue.number, issue.title, new_body) unless new_body.nil?
 
       bot_actions.each do |bot_reply|
         client.add_comment(SLUG, issue.number, bot_reply) if bot_reply.to_s.length > 0
@@ -133,6 +137,10 @@ module Fastlane
         add_needs_attention_to(pr) unless has_needs_attention_label
         needs_attention_prs << pr
       end
+
+      new_body = fix_checkboxes(pr.body)
+
+      client.update_issue(SLUG, pr.number, pr.title, new_body) unless new_body.nil?
     end
 
     def process_closed_pr(pr, prs_to_releases)
@@ -239,7 +247,7 @@ module Fastlane
 
     def mark_as_released(pr, prs_to_releases)
       version = prs_to_releases[pr.number.to_s]
-      release_url = "https://github.com/fastlane/fastlane/releases/tag/#{version}"
+      release_url = "https://github.com/#{SLUG}/releases/tag/#{version}"
 
       logger.info("Marking #{pr.number} as having been released in version #{version}")
 
@@ -282,7 +290,7 @@ module Fastlane
           # No reply from the user, let's close the issue
           logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) is #{diff_in_months.round(1)} months old, closing now")
           body = []
-          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/fastlane/fastlane/issues/new) if you still experience this problem :+1:"
+          body << "This issue will be auto-closed because there hasn't been any activity for a few months. Feel free to [open a new one](https://github.com/#{SLUG}/issues/new) if you still experience this problem :+1:"
           client.add_comment(SLUG, issue.number, body.join("\n\n"))
           client.close_issue(SLUG, issue.number)
           client.add_labels_to_an_issue(SLUG, issue.number, [AUTO_CLOSED])
@@ -393,6 +401,12 @@ module Fastlane
           prs_to_releases[pr_number] = release_name
         end
       end
+    end
+
+    def fix_checkboxes(text)
+      new_text = text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
+
+      return new_text if new_text != text
     end
   end
 end
