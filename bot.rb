@@ -406,7 +406,7 @@ module Fastlane
     def fix_checkboxes(text)
       new_text = text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
 
-      return new_text if new_text != text else nil
+      return new_text if new_text != text
     end
   end
 end
