@@ -29,7 +29,7 @@ task :post_unreleased_changes do
   require 'excon'
 
   logging_exceptions('post-unreleased-changes.log') do |logger|
-    next unless Fastlane::Bot.should_notify_slack_message_not_that_important_though?
+    next unless Fastlane::Bot.should_send_trivial_slack_notification?
     url = "https://rubygems.org/api/v1/gems/fastlane.json"
     rubygems_data = JSON.parse(open(url).read)
     live_version = rubygems_data["version"]

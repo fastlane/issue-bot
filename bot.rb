@@ -27,9 +27,8 @@ module Fastlane
 
     attr_reader :logger
 
-    def self.should_notify_slack_message_not_that_important_though?
+    def self.should_send_trivial_slack_notification?
       return true unless Date.today.saturday? || Date.today.sunday?
-      logger.info("Not notifying anyone because it's the weekend and people should enjoy their time off")
       return false
     end
 
@@ -191,8 +190,8 @@ module Fastlane
     end
 
     def notify_action_channel_about(needs_attention_prs)
+      return unless Bot.should_send_trivial_slack_notification?
       return unless needs_attention_prs.any?
-      return unless Bot.should_notify_slack_message_not_that_important_though?
 
       logger.info("Notifying the Slack room about PRs that need attention...")
 
