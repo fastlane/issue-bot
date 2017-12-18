@@ -1,8 +1,9 @@
+require 'colored'
+require 'date'
+require 'excon'
+require 'json'
 require 'octokit'
 require 'pry'
-require 'excon'
-require 'colored'
-require 'json'
 
 module Fastlane
   class Bot
@@ -25,6 +26,11 @@ module Fastlane
     NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A%22#{NEEDS_ATTENTION}%22"
 
     attr_reader :logger
+
+    def self.should_send_trivial_slack_notification?
+      return true unless Date.today.saturday? || Date.today.sunday?
+      return false
+    end
 
     def initialize(logger)
       @logger = logger
@@ -192,6 +198,7 @@ module Fastlane
     end
 
     def notify_action_channel_about(needs_attention_prs)
+      return unless Bot.should_send_trivial_slack_notification?
       return unless needs_attention_prs.any?
 
       logger.info("Notifying the Slack room about PRs that need attention...")
