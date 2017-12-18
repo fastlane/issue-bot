@@ -4,25 +4,28 @@ require 'logstash-logger'
 
 $stdout.sync = true
 
+desc 'Process all the opened and closed issues'
 task :process_issues do
   logging_exceptions('process-issues.log') do |logger|
     Fastlane::Bot.new(logger).start(process: :issues)
   end
 end
 
+desc 'Process all the opened and closed pull requests'
 task :process_prs do
   logging_exceptions('process-prs.log') do |logger|
     Fastlane::Bot.new(logger).start(process: :prs)
   end
 end
 
-# A job that will post incoming regression issues on Slack
+desc 'Post incoming regression issues on Slack'
 task :find_regressions do
   logging_exceptions('find-regressions.log') do |logger|
     Fastlane::Bot.new(logger).start(process: :regressions)
   end
 end
 
+desc 'Post unreleased changes to Slack'
 task :post_unreleased_changes do
   require 'open-uri'
   require 'json'
