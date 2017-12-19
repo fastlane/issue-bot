@@ -355,6 +355,7 @@ module Fastlane
     def last_responding_user(issue)
       client.issue_comments(SLUG, issue.number)
       link_to_last_page = client.last_response.rels[:last]
+      return unless link_to_last_page
       last_comment_page = link_to_last_page.get.data
       last_comment_page.last.user.login
     end
@@ -411,6 +412,7 @@ module Fastlane
     end
 
     def fix_checkboxes(text)
+      return nil unless text
       new_text = text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
 
       return new_text if new_text != text
