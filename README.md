@@ -4,9 +4,11 @@ This bot is responsible for commenting on GitHub issues that haven't had any act
 
 Due to the fast nature of [fastlane](https://fastlane.tools), issues often can't be reproduced anymore after 2-3 months of inactivity. 
 
+Please note that the issue-bot system run by the `fastlane` core team does not automatically deploy code changes made to this repository. When merging changes to the repository, please let a member of the `fastlane` core team know (via Slack or at-mention in the GitHub pull request), so that they can manually deploy your code change.
+
 ## Development
 
-1. You can use `rake` to easily run a couple of taks.
+1. You can use `rake` to easily run a couple of tasks.
 
     Run `bundle exec rake --tasks` _(or simply `-T`)_ to get a list of all the available tasks and their description.
 
