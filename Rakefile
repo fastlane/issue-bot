@@ -18,13 +18,6 @@ task :process_prs do
   end
 end
 
-desc 'Post incoming regression issues on Slack'
-task :find_regressions do
-  logging_exceptions('find-regressions.log') do |logger|
-    Fastlane::Bot.new(logger).start(process: :regressions)
-  end
-end
-
 desc 'Post unreleased changes to Slack'
 task :post_unreleased_changes do
   require 'open-uri'
