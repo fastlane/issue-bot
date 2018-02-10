@@ -17,7 +17,6 @@ module Fastlane
     AWAITING_REPLY = "status: waiting-for-reply"
     AUTO_CLOSED = "status: auto-closed"
     NEEDS_ATTENTION = 'status: needs-attention'
-    REGRESSION = 'status: regression'
     RELEASED = 'status: released'
     INCLUDED_IN_NEXT_RELEASE = 'status: included-in-next-release'
 
@@ -75,23 +74,6 @@ module Fastlane
             logger.info("Investigating PR ##{issue.number}...")
             process_open_pr(issue, needs_attention_prs) if issue.state == "open"
             process_closed_pr(issue, prs_to_releases) if issue.state == "closed" # includes merged
-          elsif process == :regressions
-            # .to_s in case something is nil
-            if (issue.title.to_s + issue.body.to_s).downcase.include?("regression") && !has_label?(issue, REGRESSION)
-              client.add_labels_to_an_issue(SLUG, issue.number, [REGRESSION])
-
-              post_body = {
-                text: "New PR/Issue containing the word \"regression\": #{issue.html_url}"
-              }.to_json
-              logger.info("Found regression on GH issue/PR #{issue.html_url}")
-
-              response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
-              if response.status == 200
-                logger.info("Successfully notified the Slack room about PRs that need attention")
-              else
-                logger.info("Failed to notify the Slack room about PRs that need attention")
-              end
-            end
           end
         end
 
