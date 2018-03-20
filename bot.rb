@@ -335,11 +335,10 @@ module Fastlane
     end
 
     def last_responding_user(issue)
-      client.issue_comments(SLUG, issue.number)
+      first_page = client.issue_comments(SLUG, issue.number)
       link_to_last_page = client.last_response.rels[:last]
-      return unless link_to_last_page
-      last_comment_page = link_to_last_page.get.data
-      last_comment_page.last.user.login
+      last_page = link_to_last_page.get.data if link_to_last_page
+      return (last_page || first_page).last.user.login
     end
 
     def smart_sleep
