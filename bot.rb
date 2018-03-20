@@ -7,7 +7,7 @@ require 'pry'
 
 module Fastlane
   class Bot
-    SLUG = "fastlane/fastlane"
+    SLUG = ENV['FASTLANE_ISSUE_BOT_SLUG'] || "fastlane/fastlane"
     ISSUE_WARNING = 1 # in months
     ISSUE_CLOSED = 0.25 # plus the x months from ISSUE_WARNING
     ISSUE_LOCK = 2 # lock all issues with no activity within the last 3 months
