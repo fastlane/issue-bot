@@ -1,8 +1,17 @@
 # issue-bot
 
-This bot is responsible for commenting on GitHub issues that haven't had any activity for multiple months. 
+This bot interacts on GitHub issues and pull requests due to multiple reasons.
 
-Due to the fast nature of [fastlane](https://fastlane.tools), issues often can't be reproduced anymore after 2-3 months of inactivity. 
+One example are issues that haven't had any activity for multiple months. Due to the fast nature of [fastlane](https://fastlane.tools), issues often can't be reproduced anymore after 2-3 months of inactivity. Those issues are closed.
+
+Other use cases:
+
+- comment on PRs that were merged and will be included in the next release
+- comment on PRs whose content is now available and released
+- adds label to PRs that have been open for too long
+- closes and locks old, inactive issues and PRs
+- responds to issues that contain trigger words with specific message
+- adds label to issues that require a reply from the original poster
 
 Please note that the issue-bot system run by the `fastlane` core team does not automatically deploy code changes made to this repository. When merging changes to the repository, please let a member of the `fastlane` core team know (via Slack or at-mention in the GitHub pull request), so that they can manually deploy your code change.
 
