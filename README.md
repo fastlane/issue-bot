@@ -36,6 +36,13 @@ Please note that the issue-bot system run by the `fastlane` core team does not a
 3. If you want to test it with actual data, you need to create a GitHub access token by going to https://github.com/settings/tokens, generating a new token and following these steps:
 
     1. create a testing GitHub project
-    2. update the `SLUG` constant with this new project's path (`<username>/<project name>`)
-    3. run `export GITHUB_API_TOKEN=<token>`
-    4. run the steps `2.ii` - `2.v`
+    2. create a `.keys` file containing:
+
+    ```bash
+    export FASTLANE_ISSUE_BOT_SLUG="<github-username>/<repo-name>"
+    export GITHUB_API_TOKEN="<github-token>"
+    export ACTION_CHANNEL_SLACK_WEB_HOOK_URL="https://hooks.slack.com/services/<slack-hook-id>"
+    ```
+
+    3. run `source .keys`
+    4. run step `1` or the steps `2.ii` - `2.v`
