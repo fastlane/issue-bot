@@ -68,6 +68,20 @@ task :post_unreleased_changes do
   end
 end
 
+desc 'Dump the schema for a v4 Github GraphQL API'
+task :dump_schema do
+  logging_exceptions('dump-schema.log') do |logger|
+    GitHubAPI.dump_schema()
+  end
+end
+
+desc 'Post incoming regression issues on Slack'
+task :process_pinned_issues do
+  logging_exceptions('process-pinned-issues.log') do |logger|
+    Fastlane::Bot.new(logger).fetch_and_process_pinned_issues()
+  end
+end
+
 def logging_exceptions(name)
   logger = create_logger(name)
   begin

@@ -4,10 +4,14 @@ require 'excon'
 require 'json'
 require 'octokit'
 require 'pry'
+require "graphql/client"
+require "graphql/client/http"
 
 module Fastlane
   class Bot
     SLUG = "fastlane/fastlane"
+    REPOSITORY_OWNER = SLUG.split("/")[0]
+    REPOSITORY_NAME = SLUG.split("/")[1]
     ISSUE_WARNING = 1 # in months
     ISSUE_CLOSED = 0.25 # plus the x months from ISSUE_WARNING
     ISSUE_LOCK = 2 # lock all issues with no activity within the last 3 months
@@ -81,6 +85,8 @@ module Fastlane
         # If there's a next page, keep going
         issues_page = has_next_page ? fetch_issues(page) : nil
       end
+
+      fetch_and_process_pinned_issues()
 
       notify_action_channel_about(needs_attention_prs)
 
@@ -334,6 +340,37 @@ module Fastlane
       return body.join("\n\n")
     end
 
+    def fetch_and_process_pinned_issues
+      logger.info("Fetching pinned issues from '#{SLUG}'...")
+      result = GitHubAPI::Client.query(GitHubAPI::Query::PINNED_ISSUES, variables: { owner: REPOSITORY_OWNER, name: REPOSITORY_NAME })
+      result.data.repository.pinned_issues.edges.each do |edge|
+        pinned_issue = edge.node.issue
+        if pinned_issue.closed
+          slack_about_closed_pinned_issues(pinned_issue)
+        end
+      end
+    end
+
+    def slack_about_closed_pinned_issues(pinned_issue)
+      return unless Bot.should_send_trivial_slack_notification?
+
+      logger.info("Notifying the Slack room about pinned issue that is closed...")
+
+      post_body = {
+        text: "Caution: Item ##{pinned_issue.number} is still a pinned issue although it was recently closed: #{pinned_issue.url}"
+      }.to_json
+
+      logger.info(post_body)
+
+      response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
+
+      if response.status == 200
+       logger.info("Successfully notified the Slack room about pinned issue that is closed")
+      else
+       logger.info("Failed to notify the Slack room about pinned issue that is closed")
+      end
+    end
+
     def last_responding_user(issue)
       first_page = client.issue_comments(SLUG, issue.number)
       link_to_last_page = client.last_response.rels[:last]
@@ -398,5 +435,43 @@ module Fastlane
 
       return new_text if new_text != text
     end
+  end
+end
+
+module GitHubAPI
+  SCHEMA_PATH = "schema.json"
+  HTTP = GraphQL::Client::HTTP.new("https://api.github.com/graphql") do
+    def headers(context)
+      { 
+        "Accept" => "application/vnd.github.elektra-preview+json",
+        "Authorization" => "Bearer #{ENV["GITHUB_API_TOKEN"]}"
+      }
+    end
+  end
+  Schema = GraphQL::Client.load_schema(HTTP)
+  Client = GraphQL::Client.new(schema: Schema, execute: HTTP)
+
+  def self.dump_schema() 
+    GraphQL::Client.dump_schema(HTTP, SCHEMA_PATH)
+  end
+
+  class Query 
+    PINNED_ISSUES = GitHubAPI::Client.parse <<-'GRAPHQL'
+      query($owner: String!, $name: String!) {
+        repository(owner:$owner, name:$name) {
+          pinnedIssues(first: 3) {
+            edges {
+              node {
+                issue {
+                  number
+                  closed
+                  url
+                }
+              }
+            }
+          }
+        }
+      }
+    GRAPHQL
   end
 end
