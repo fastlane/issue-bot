@@ -354,20 +354,18 @@ module Fastlane
     def slack_about_closed_pinned_issues(pinned_issue)
       return unless Bot.should_send_trivial_slack_notification?
 
-      logger.info("Notifying the Slack room about pinned issue that is closed...")
+      logger.info("Notifying the Slack room about pinned issue #{pinned_issue.number} that is closed...")
 
       post_body = {
         text: "Caution: Item ##{pinned_issue.number} is still a pinned issue although it was recently closed: #{pinned_issue.url}"
       }.to_json
-
-      logger.info(post_body)
 
       response = Excon.post(ACTION_CHANNEL_SLACK_WEB_HOOK_URL, body: post_body, headers: { "Content-Type" => "application/json" })
 
       if response.status == 200
        logger.info("Successfully notified the Slack room about pinned issue that is closed")
       else
-       logger.info("Failed to notify the Slack room about pinned issue that is closed")
+       logger.info("Failed to notify the Slack room about pinned issue that is closed. Response status: #{response.status}. Response body: #{response.body}")
       end
     end
 

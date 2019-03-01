@@ -75,7 +75,7 @@ task :dump_schema do
   end
 end
 
-desc 'Post incoming regression issues on Slack'
+desc 'Post closed pinned issues on Slack'
 task :process_pinned_issues do
   logging_exceptions('process-pinned-issues.log') do |logger|
     Fastlane::Bot.new(logger).fetch_and_process_pinned_issues()
