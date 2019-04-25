@@ -7,3 +7,4 @@ gem "colored"
 gem "rake"
 gem "rubocop"
 gem "logstash-logger"
+gem 'graphql-client'
