@@ -313,7 +313,7 @@ module Fastlane
 
     def process_env_check(issue)
       body = issue.body + issue.title
-      unless body.include?("Loaded fastlane plugins")
+      unless body.include?("Loaded fastlane plugins") || body.include?("### Feature Request")
         logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) seems to be missing env report")
         body = []
         body << "It seems like you have not included the output of `fastlane env`"
