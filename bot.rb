@@ -100,6 +100,11 @@ module Fastlane
     end
 
     def process_open_issue(issue)
+      if has_label?(issue, HAS_PR)
+        logger.info("https://github.com/#{SLUG}/issues/#{issue.number} has PR 👍")
+        return
+      end
+      
       bot_actions = []
       process_inactive(issue)
 
