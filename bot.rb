@@ -23,6 +23,7 @@ module Fastlane
     NEEDS_ATTENTION = 'status: needs-attention'
     RELEASED = 'status: released'
     INCLUDED_IN_NEXT_RELEASE = 'status: included-in-next-release'
+    HAS_PR = 'status: has-pr'
 
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
