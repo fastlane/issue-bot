@@ -302,6 +302,7 @@ module Fastlane
         body = []
         body << "There hasn't been any activity on this issue recently. Due to the high number of incoming GitHub notifications, we have to clean some of the old issues, as many of them have already been resolved with the latest updates."
         body << "Please make sure to update to the latest `fastlane` version and check if that solves the issue. Let us know if that works for you by adding a comment :+1:"
+        body << "Friendly reminder: contributions are always welcome! Check out [CONTRIBUTING.md](https://github.com/fastlane/fastlane/blob/master/CONTRIBUTING.md) for more information on how to help with `fastlane` and feel free to tackle this issue yourself :muscle:"
 
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.add_labels_to_an_issue(SLUG, issue.number, [AWAITING_REPLY])
