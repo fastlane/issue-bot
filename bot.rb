@@ -251,6 +251,17 @@ module Fastlane
       client.remove_label(SLUG, pr.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
       client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
+
+      issue_number = referenced_issue_number?(pr)
+      if issue_number
+        logger.info("Adding a comment to the issue #{issue_number} that pull request #{pr.number} has been released")
+
+        body = []
+        body << "The pull request ##{pr.number} that closed this issue was merged and released as part of [_fastlane_ #{version}](#{release_url}) :rocket:"
+        body << "Please let us know if the functionality works as expected as a reply here. If it does not, please open a new issue. Thanks!"
+        client.add_comment(SLUG, issue_number, body.join("\n"))
+      end
+
       smart_sleep
     end
 
@@ -433,6 +444,23 @@ module Fastlane
       new_text = text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
 
       return new_text if new_text != text
+    end
+
+    # Checks if a PR's description contains an issue reference.
+    def referenced_issue_number?(pr)
+      return unless pr.body
+
+      # Searching for `closes #1234` or `fixes #1234` in PR's description
+      issue_number = pr.body[/(closes|fixes) #\d{1,}/i, 0]
+      issue_number = issue_number[/#\d{1,}/i, 0] if issue_number
+      issue_number = issue_number.tr('#', '') if issue_number
+
+      # Searching for `closes https://github.com/REPOSITORY_OWNER/REPOSITORY_NAME/issues/1234` 
+      # or `fixes https://github.com/fastlane/REPOSITORY_OWNER/REPOSITORY_NAME/1234 in PR's description
+      issue_number = pr.body[/(closes|fixes) https:\/\/github.com\/#{REPOSITORY_OWNER}\/#{REPOSITORY_NAME}\/issues\/\d{1,}/i, 0] unless issue_number
+      issue_number = issue_number.split('/').last if issue_number
+
+      return issue_number
     end
   end
 end
