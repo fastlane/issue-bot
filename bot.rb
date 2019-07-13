@@ -24,6 +24,19 @@ module Fastlane
     RELEASED = 'status: released'
     INCLUDED_IN_NEXT_RELEASE = 'status: included-in-next-release'
 
+    # Issue closing keywords: https://help.github.com/en/articles/closing-issues-using-keywords
+    ISSUE_CLOSING_KEYWORDS = [
+      "close",
+      "closes",
+      "closed",
+      "fix",
+      "fixes",
+      "fixed",
+      "resolve",
+      "resolves",
+      "resolved"
+    ]
+
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
     NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A%22#{NEEDS_ATTENTION}%22"
@@ -451,13 +464,13 @@ module Fastlane
       return unless pr.body
 
       # Searching for `closes #1234` or `fixes #1234` in PR's description
-      issue_number = pr.body[/(closes|fixes) #\d{1,}/i, 0]
+      issue_number = pr.body[/(#{ISSUE_CLOSING_KEYWORDS.join('|')}) #\d{1,}/i, 0]
       issue_number = issue_number[/#\d{1,}/i, 0] if issue_number
       issue_number = issue_number.tr('#', '') if issue_number
 
       # Searching for `closes https://github.com/REPOSITORY_OWNER/REPOSITORY_NAME/issues/1234` 
       # or `fixes https://github.com/fastlane/REPOSITORY_OWNER/REPOSITORY_NAME/1234 in PR's description
-      issue_number = pr.body[/(closes|fixes) https:\/\/github.com\/#{REPOSITORY_OWNER}\/#{REPOSITORY_NAME}\/issues\/\d{1,}/i, 0] unless issue_number
+      issue_number = pr.body[/(#{ISSUE_CLOSING_KEYWORDS.join('|')}) https:\/\/github.com\/#{REPOSITORY_OWNER}\/#{REPOSITORY_NAME}\/issues\/\d{1,}/i, 0] unless issue_number
       issue_number = issue_number.split('/').last if issue_number
 
       return issue_number
