@@ -459,7 +459,8 @@ module Fastlane
       return new_text if new_text != text
     end
 
-    # Checks if a PR's description contains an issue reference
+    # Checks if a PR's description contains an issue reference.
+    # This only works for issues in the same repository.
     def referenced_issue_number?(pr)
       return unless pr.body
 
