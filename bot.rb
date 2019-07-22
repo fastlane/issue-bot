@@ -25,6 +25,19 @@ module Fastlane
     INCLUDED_IN_NEXT_RELEASE = 'status: included-in-next-release'
     HAS_PR = 'status: has-pr'
 
+    # Issue closing keywords: https://help.github.com/en/articles/closing-issues-using-keywords
+    ISSUE_CLOSING_KEYWORDS = [
+      "close",
+      "closes",
+      "closed",
+      "fix",
+      "fixes",
+      "fixed",
+      "resolve",
+      "resolves",
+      "resolved"
+    ]
+
     ACTION_CHANNEL_SLACK_WEB_HOOK_URL = ENV['ACTION_CHANNEL_SLACK_WEB_HOOK_URL']
 
     NEEDS_ATTENTION_PR_QUERY = "https://github.com/#{SLUG}/pulls?q=is%3Aopen+is%3Apr+label%3A%22#{NEEDS_ATTENTION}%22"
@@ -257,6 +270,17 @@ module Fastlane
       client.remove_label(SLUG, pr.number, INCLUDED_IN_NEXT_RELEASE) if has_label?(pr, INCLUDED_IN_NEXT_RELEASE)
       client.add_labels_to_an_issue(SLUG, pr.number, [RELEASED])
       client.add_comment(SLUG, pr.number, "Congratulations! :tada: This was released as part of [_fastlane_ #{version}](#{release_url}) :rocket:")
+
+      issue_number = referenced_issue_number?(pr)
+      if issue_number
+        logger.info("Adding a comment to the issue #{issue_number} that pull request #{pr.number} has been released")
+
+        body = []
+        body << "The pull request ##{pr.number} that closed this issue was merged and released as part of [_fastlane_ #{version}](#{release_url}) :rocket:"
+        body << "Please let us know if the functionality works as expected as a reply here. If it does not, please open a new issue. Thanks!"
+        client.add_comment(SLUG, issue_number, body.join("\n"))
+      end
+
       smart_sleep
     end
 
@@ -439,6 +463,23 @@ module Fastlane
       new_text = text.gsub(/^- \[\s*\S+\s*\]/, "- [x]")
 
       return new_text if new_text != text
+    end
+
+    # Checks if a PR's description contains an issue reference.
+    # This only works for issues in the same repository.
+    def referenced_issue_number?(pr)
+      return unless pr.body
+
+      # Searching for issue closing keywords + issue identifier in PR's description, i.e. `fixes #1234`
+      issue_number = pr.body[/(#{ISSUE_CLOSING_KEYWORDS.join('|')}) #\d{1,}/i, 0]
+      issue_number = issue_number[/#\d{1,}/i, 0] if issue_number
+      issue_number = issue_number.tr('#', '') if issue_number
+
+      # Searching for issue closing keywords + issue URL in PR's description, i.e. `closes https://github.com/REPOSITORY_OWNER/REPOSITORY_NAME/issues/1234`
+      issue_number = pr.body[/(#{ISSUE_CLOSING_KEYWORDS.join('|')}) https:\/\/github.com\/#{REPOSITORY_OWNER}\/#{REPOSITORY_NAME}\/issues\/\d{1,}/i, 0] unless issue_number
+      issue_number = issue_number.split('/').last if issue_number
+
+      return issue_number
     end
   end
 end
