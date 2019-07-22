@@ -459,17 +459,16 @@ module Fastlane
       return new_text if new_text != text
     end
 
-    # Checks if a PR's description contains an issue reference.
+    # Checks if a PR's description contains an issue reference
     def referenced_issue_number?(pr)
       return unless pr.body
 
-      # Searching for `closes #1234` or `fixes #1234` in PR's description
+      # Searching for issue closing keywords + issue identifier in PR's description, i.e. `fixes #1234`
       issue_number = pr.body[/(#{ISSUE_CLOSING_KEYWORDS.join('|')}) #\d{1,}/i, 0]
       issue_number = issue_number[/#\d{1,}/i, 0] if issue_number
       issue_number = issue_number.tr('#', '') if issue_number
 
-      # Searching for `closes https://github.com/REPOSITORY_OWNER/REPOSITORY_NAME/issues/1234` 
-      # or `fixes https://github.com/fastlane/REPOSITORY_OWNER/REPOSITORY_NAME/1234 in PR's description
+      # Searching for issue closing keywords + issue URL in PR's description, i.e. `closes https://github.com/REPOSITORY_OWNER/REPOSITORY_NAME/issues/1234`
       issue_number = pr.body[/(#{ISSUE_CLOSING_KEYWORDS.join('|')}) https:\/\/github.com\/#{REPOSITORY_OWNER}\/#{REPOSITORY_NAME}\/issues\/\d{1,}/i, 0] unless issue_number
       issue_number = issue_number.split('/').last if issue_number
 
