@@ -123,7 +123,6 @@ module Fastlane
       process_inactive(issue)
 
       return if issue.comments > 0 # there maybe already some bot replies
-      bot_actions << process_code_signing(issue)
       bot_actions << process_env_check(issue)
 
       new_body = fix_checkboxes(issue.body)
@@ -352,23 +351,6 @@ module Fastlane
         return body.join("\n\n")
       end
       return nil
-    end
-
-    # Ask people to check out the code signing bot
-    def process_code_signing(issue)
-      signing_words = ["signing", "provisioning"]
-      body = issue.body + issue.title
-      signing_related = signing_words.find_all do |keyword|
-        body.downcase.include?(keyword)
-      end
-      return nil if signing_related.count == 0
-
-      url = "https://docs.fastlane.tools/codesigning/getting-started/"
-      logger.info("https://github.com/#{SLUG}/issues/#{issue.number} (#{issue.title}) might have something to do with code signing")
-      body = []
-      body << "It seems like this issue might be related to code signing :no_entry_sign:"
-      body << "Have you seen our new [Code Signing Troubleshooting Guide](#{url})? It will help you resolve the most common code signing issues :+1:"
-      return body.join("\n\n")
     end
 
     def fetch_and_process_pinned_issues
