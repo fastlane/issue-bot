@@ -12,7 +12,7 @@ GEM
     coderay (1.1.2)
     colored (1.2)
     concurrent-ruby (1.1.4)
-    excon (0.60.0)
+    excon (0.71.0)
     faraday (0.14.0)
       multipart-post (>= 1.2, < 3)
     graphql (1.9.3)
