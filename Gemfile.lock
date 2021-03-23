@@ -69,5 +69,8 @@ DEPENDENCIES
   rake
   rubocop
 
+RUBY VERSION
+   ruby 2.6.6p146
+
 BUNDLED WITH
-   1.16.0
+   1.17.2
