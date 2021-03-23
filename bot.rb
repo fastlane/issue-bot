@@ -13,8 +13,8 @@ module Fastlane
     REPOSITORY_OWNER = SLUG.split("/")[0]
     REPOSITORY_NAME = SLUG.split("/")[1]
     ISSUE_WARNING = 1 # in months
-    ISSUE_CLOSED = 0.25 # plus the x months from ISSUE_WARNING
-    ISSUE_LOCK = 2 # lock all issues with no activity within the last 3 months
+    ISSUE_CLOSED = 1 # plus the x months from ISSUE_WARNING
+    ISSUE_LOCK = 4 # lock all issues with no activity within the last 3 months
     NEEDS_ATTENTION_PR_LIFESPAN_DAYS = 14 # threshold for marking a PR as needing attention
 
     # Labels
@@ -332,6 +332,7 @@ module Fastlane
         body << "There hasn't been any activity on this issue recently. Due to the high number of incoming GitHub notifications, we have to clean some of the old issues, as many of them have already been resolved with the latest updates."
         body << "Please make sure to update to the latest `fastlane` version and check if that solves the issue. Let us know if that works for you by adding a comment :+1:"
         body << "Friendly reminder: contributions are always welcome! Check out [CONTRIBUTING.md](https://github.com/fastlane/fastlane/blob/master/CONTRIBUTING.md) for more information on how to help with `fastlane` and feel free to tackle this issue yourself :muscle:"
+        body << "\n\nThis issue will be auto-closed if there is no reply within #{months(ISSUE_CLOSED)}."
 
         client.add_comment(SLUG, issue.number, body.join("\n\n"))
         client.add_labels_to_an_issue(SLUG, issue.number, [AWAITING_REPLY])
@@ -462,6 +463,11 @@ module Fastlane
       issue_number = issue_number.split('/').last if issue_number
 
       return issue_number
+    end
+
+    def months(number)
+      str = number == 1 ? "month" : "months"
+      return "#{number} #{str}"
     end
   end
 end
